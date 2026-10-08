@@ -24,7 +24,8 @@ export interface Shipment {
   providedIn: 'root'
 })
 export class TransportService {
-  private apiUrl = 'http://localhost:8080/sel/firebase/all';
+  //private apiUrl = 'http://localhost:8080/sel/firebase/all';
+  private apiUrl = 'https://api.ishipto.vn/sel/firebase/all';
 
   public showBookingFrame$ = new BehaviorSubject<boolean>(true);
   public showShipmentFrame$ = new BehaviorSubject<boolean>(true);
