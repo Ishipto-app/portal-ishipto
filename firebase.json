@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist/booking-ishipto",
+    "public": "dist/booking-ishipto/browser",
     "ignore": [
       "firebase.json",
       "**/.*",
