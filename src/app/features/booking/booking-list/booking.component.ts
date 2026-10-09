@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { BookingService } from '../../../core/services/booking.service'; // Đảm bảo đường dẫn tới BookingService đúng với project
 
 declare var html2pdf: any;
-
 @Component({
   selector: 'app-booking',
   standalone: true,
@@ -12,6 +13,195 @@ declare var html2pdf: any;
   templateUrl: './booking.component.html',
 })
 export class BookingComponent implements OnInit {
+  // Inject Services
+  private bookingService = inject(BookingService);
+  private router = inject(Router);
+  // Signals trạng thái kết nối từ Service
+  bookings = this.bookingService.bookings;
+  isLoading = this.bookingService.isLoading;
+  error = this.bookingService.error;
+
+  // Signals cho bộ lọc từng cột
+  filterCode = signal<string>('');
+  filterStatus = signal<string>('ALL');
+  filterPol = signal<string>('ALL');
+  filterPod = signal<string>('ALL');
+  filterCustomer = signal<string>('');
+  filterVessel = signal<string>('');
+  filterCommodity = signal<string>('');
+
+  // Sắp xếp
+  sortField = signal<'code' | 'date' | 'customer' | 'status'>('date');
+  sortAsc = signal<boolean>(false);
+
+  // Phân trang
+  currentPage = signal<number>(1);
+  itemsPerPage = signal<number>(10);
+
+  // Modal Xóa
+  deleteModalOpen = signal<boolean>(false);
+  selectedDeleteId = signal<string | null>(null);
+  isMobileFilterOpen = signal<boolean>(false);
+
+  // Trạng thái Giao diện & Modal khác
+  showBookingFrame = true;
+  showShipmentFrame = true;
+  activeModal: string | null = null;
+
+  // Dữ liệu mock phục vụ Shipment và các modal khác
+  shipments: any[] = [];
+  debtList: any[] = [];
+  vesselSchedules: any[] = [];
+  selectedShipment: any = null;
+  bookingFormData: any = {};
+  ticketData: any = {};
+  isEditingBL = false;
+
+  // Tự động trích xuất danh sách duy nhất Cảng đi (POL) và Cảng đến (POD) cho dropdown
+  polList = computed(() => {
+    const set = new Set<string>();
+    this.bookings().forEach(b => {
+      if (b.shipment?.pol?.name) set.add(b.shipment.pol.name);
+    });
+    return Array.from(set).sort();
+  });
+
+  podList = computed(() => {
+    const set = new Set<string>();
+    this.bookings().forEach(b => {
+      if (b.shipment?.pod?.name) set.add(b.shipment.pod.name);
+    });
+    return Array.from(set).sort();
+  });
+
+  // Computed: Lọc đồng thời theo tất cả các cột
+  filteredBookings = computed(() => {
+    const code = this.filterCode().toLowerCase();
+    const status = this.filterStatus();
+    const pol = this.filterPol();
+    const pod = this.filterPod();
+    const customer = this.filterCustomer().toLowerCase();
+    const vessel = this.filterVessel().toLowerCase();
+    const commodity = this.filterCommodity().toLowerCase();
+
+    return this.bookings().filter(b => {
+      const matchCode = !code || (b.shipment?.code || '').toLowerCase().includes(code);
+      const matchStatus = status === 'ALL' || b.status === status;
+      const matchPol = pol === 'ALL' || b.shipment?.pol?.name === pol;
+      const matchPod = pod === 'ALL' || b.shipment?.pod?.name === pod;
+      
+      const custStr = ((b.shipment?.customer?.full_name || '') + ' ' + (b.shipment?.customer?.short_name || '')).toLowerCase();
+      const matchCustomer = !customer || custStr.includes(customer);
+
+      const vesselStr = ((b.route?.voyage_0?.vessel_name || '') + ' ' + (b.route?.voyage_0?.voyage_name || '')).toLowerCase();
+      const matchVessel = !vessel || vesselStr.includes(vessel);
+
+      const commStr = (b.volume?.volume_0?.commodity?.name || b.document?.book_commodity || '').toLowerCase();
+      const matchCommodity = !commodity || commStr.includes(commodity);
+
+      return matchCode && matchStatus && matchPol && matchPod && matchCustomer && matchVessel && matchCommodity;
+    }).sort((a, b) => {
+      let valA: any = '';
+      let valB: any = '';
+
+      if (this.sortField() === 'code') {
+        valA = a.shipment?.code || '';
+        valB = b.shipment?.code || '';
+      } else if (this.sortField() === 'date') {
+        valA = a.route?.voyage_0?.depart_time || 0;
+        valB = b.route?.voyage_0?.depart_time || 0;
+      } else if (this.sortField() === 'customer') {
+        valA = a.shipment?.customer?.short_name || '';
+        valB = b.shipment?.customer?.short_name || '';
+      } else if (this.sortField() === 'status') {
+        valA = a.status || '';
+        valB = b.status || '';
+      }
+
+      if (valA < valB) return this.sortAsc() ? -1 : 1;
+      if (valA > valB) return this.sortAsc() ? 1 : -1;
+      return 0;
+    });
+  });
+
+  totalPages = computed(() => Math.ceil(this.filteredBookings().length / this.itemsPerPage()) || 1);
+
+  paginatedBookings = computed(() => {
+    const start = (this.currentPage() - 1) * this.itemsPerPage();
+    return this.filteredBookings().slice(start, start + this.itemsPerPage());
+  });
+
+  get filteredShipments() {
+    return this.shipments;
+  }
+
+    
+
+  loadData(): void {
+    this.bookingService.getAllBookings().subscribe({
+      error: (err) => console.error('Lỗi khi nạp booking từ API:', err)
+    });
+  }
+
+  onSort(field: 'code' | 'date' | 'customer' | 'status'): void {
+    if (this.sortField() === field) {
+      this.sortAsc.update(v => !v);
+    } else {
+      this.sortField.set(field);
+      this.sortAsc.set(true);
+    }
+  }
+
+  resetFilters(): void {
+    this.filterCode.set('');
+    this.filterStatus.set('ALL');
+    this.filterPol.set('ALL');
+    this.filterPod.set('ALL');
+    this.filterCustomer.set('');
+    this.filterVessel.set('');
+    this.filterCommodity.set('');
+    this.currentPage.set(1);
+  }
+
+  goToPage(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  confirmDelete(id: string): void {
+    this.selectedDeleteId.set(id);
+    this.deleteModalOpen.set(true);
+  }
+
+  executeDelete(): void {
+    // const id = this.selectedDeleteId();
+    // if (id) {
+    //   this.bookingService.deleteBooking(id).subscribe(() => {
+    //     this.deleteModalOpen.set(false);
+    //     this.selectedDeleteId.set(null);
+    //   });
+    // }
+  }
+
+  navigateToCreate(): void {
+    this.router.navigate(['/bookings/new']);
+  }
+
+  navigateToEdit(id: string): void {
+    this.router.navigate(['/bookings', id, 'edit']);
+  }
+
+  toggleFrame(frame: string) {
+    if (frame === 'booking') this.showBookingFrame = !this.showBookingFrame;
+    if (frame === 'shipment') this.showShipmentFrame = !this.showShipmentFrame;
+  }
+
+
+  closeModal() {
+    this.activeModal = null;
+    this.selectedShipment = null;
+    this.isEditingBL = false;
+  }
+
   // Trạng thái hệ thống & Xác thực
   isAuthenticated = true;
   authTab: 'login' | 'register' | 'forgot' = 'login';
@@ -21,21 +211,6 @@ export class BookingComponent implements OnInit {
   regData: any = {};
   resetEmail = '';
 
-  // Trạng thái giao diện
-  showBookingFrame = true;
-  showShipmentFrame = true;
-  activeModal: string | null = null;
-
-  // Dữ liệu
-  bookings: any[] = [];
-  shipments: any[] = [];
-  debtList: any[] = [];
-  vesselSchedules: any[] = [];
-  
-  selectedShipment: any = null;
-  bookingFormData: any = {};
-  ticketData: any = {};
-  isEditingBL = false;
 
   // Cấu hình Timeline
   timelineSteps = [
@@ -52,6 +227,7 @@ export class BookingComponent implements OnInit {
 
   ngOnInit() {
     this.generateMockData();
+    this.loadData();
   }
 
   // --- HÀM XỬ LÝ AUTH ---
@@ -74,19 +250,6 @@ export class BookingComponent implements OnInit {
     this.authTab = 'login';
   }
 
-  toggleFrame(frame: string) {
-    if (frame === 'booking') this.showBookingFrame = !this.showBookingFrame;
-    if (frame === 'shipment') this.showShipmentFrame = !this.showShipmentFrame;
-  }
-
-  // --- HÀM LỌC DỮ LIỆU (Thay thế AngularJS Filter) ---
-  get filteredBookings() {
-    return this.bookings.filter(item => this.applyGlobalFilter(item));
-  }
-
-  get filteredShipments() {
-    return this.shipments.filter(item => this.applyGlobalFilter(item));
-  }
 
   applyGlobalFilter(item: any): boolean {
     const s = this.filters.searchCode.toLowerCase();
@@ -100,9 +263,6 @@ export class BookingComponent implements OnInit {
     return codeMatch && customerMatch && portMatch;
   }
 
-  resetFilters() {
-    this.filters = { searchCode: '', customer: '', port: '', fromDate: null, toDate: null };
-  }
 
   // --- NGHIỆP VỤ ---
   convertToShipment(booking: any) {
@@ -147,16 +307,9 @@ export class BookingComponent implements OnInit {
     };
 
     this.shipments.unshift(newShipment);
-    this.bookings = this.bookings.filter(b => b.id !== booking.id);
     alert(`Đã chuyển thành công Đơn hàng ${booking.bookingCode} sang Chuyến Shipment: ${newShipmentCode}`);
   }
 
-  // --- MODAL CONTROLLERS ---
-  closeModal() {
-    this.activeModal = null;
-    this.selectedShipment = null;
-    this.isEditingBL = false;
-  }
 
   openCreateBookingModal() {
     this.bookingFormData = {
@@ -174,21 +327,21 @@ export class BookingComponent implements OnInit {
   }
 
   saveBooking() {
-    if (this.bookingFormData.id) {
-      const idx = this.bookings.findIndex(b => b.id === this.bookingFormData.id);
-      if (idx > -1) this.bookings[idx] = { ...this.bookingFormData };
-    } else {
-      this.bookingFormData.id = 'BK-' + Date.now();
-      this.bookingFormData.bookingCode = 'SEL-BK2026-' + Math.floor(1000 + Math.random() * 9000);
-      this.bookingFormData.etd = new Date(2026, 9, 20);
-      this.bookings.unshift({ ...this.bookingFormData });
-    }
+    // if (this.bookingFormData.id) {
+    //   const idx = this.bookings.findIndex(b => b.id === this.bookingFormData.id);
+    //   if (idx > -1) this.bookings[idx] = { ...this.bookingFormData };
+    // } else {
+    //   this.bookingFormData.id = 'BK-' + Date.now();
+    //   this.bookingFormData.bookingCode = 'SEL-BK2026-' + Math.floor(1000 + Math.random() * 9000);
+    //   this.bookingFormData.etd = new Date(2026, 9, 20);
+    //   this.bookings.unshift({ ...this.bookingFormData });
+    // }
     this.closeModal();
   }
 
   deleteBooking(id: string) {
     if (confirm('Bạn có chắc chắn muốn xóa đơn Booking này?')) {
-      this.bookings = this.bookings.filter(b => b.id !== id);
+      //this.bookings = this.bookings.filter(b => b.id !== id);
     }
   }
 
@@ -255,19 +408,6 @@ export class BookingComponent implements OnInit {
     const customers = ['Tập đoàn Dệt May Hòa Phát', 'Nông Sản Việt Nam Corp', 'Gỗ Mỹ Nghệ Á Châu', 'XNK Thủy Sản An Giang', 'Điện Tử Samsung Logistics'];
 
     for (let i = 1; i <= 15; i++) {
-      this.bookings.push({
-        id: 'BK-' + (100 + i),
-        bookingCode: 'SEL-BK2026-' + (1000 + i),
-        customerName: customers[i % customers.length],
-        pol: portsPOL[i % 2],
-        pod: portsPOD[i % 3],
-        pickupRange: (i % 2 === 0) ? '08:00 - 12:00' : '13:00 - 17:00',
-        containerType: (i % 2 === 0) ? '40HC' : '20DC',
-        quantity: Math.floor(Math.random() * 3) + 1,
-        etd: new Date(2026, 9, 10 + i),
-        estimatedTotal: 1200 + (i * 85)
-      });
-
       const stepProgress = (i % 6) + 1;
       const totalAmount = (1500 + (i * 50)) + 200 + (350 * 1.08);
       const shipCode = 'SEL-SH2026-' + (5000 + i);

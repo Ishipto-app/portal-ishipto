@@ -14,9 +14,9 @@ export class BookingService {
   //private readonly apiUrl = 'https://synthesis-boxer-jarring.vngrok-free.dev/sel/firebase/all';
   private readonly apiUrl = 'https://ishipto-node10.appspot.com/sel/firebase/all';
   // Angular 21 Signals quản lý dữ liệu và trạng thái tải
-  readonly bookings = signal<Booking[]>([]);
-  readonly isLoading = signal<boolean>(false);
-  readonly error = signal<string | null>(null);
+  bookings = signal<Booking[]>([]);
+  isLoading = signal<boolean>(false);
+  error = signal<string | null>(null);
 
   /**
    * Header đặc thù cho ngrok free tier để bỏ qua trang HTML cảnh báo
