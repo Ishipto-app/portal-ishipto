@@ -11,8 +11,8 @@ export class BookingService {
   private http = inject(HttpClient);
 
   // Endpoint Backend Express đọc từ Firebase Firestore
-  private readonly apiUrl = 'https://synthesis-boxer-jarring.ngrok-free.dev/sel/firebase/all';
-
+  //private readonly apiUrl = 'https://synthesis-boxer-jarring.ngrok-free.dev/sel/firebase/all';
+  private readonly apiUrl = 'https://ishipto-node10.appspot.com/sel/firebase/all';
   // Angular 21 Signals quản lý dữ liệu và trạng thái tải
   readonly bookings = signal<Booking[]>([]);
   readonly isLoading = signal<boolean>(false);
