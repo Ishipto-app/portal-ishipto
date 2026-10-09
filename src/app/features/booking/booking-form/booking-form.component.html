@@ -1,0 +1,364 @@
+<div class="p-2 sm:p-4 lg:p-6 bg-slate-50 min-h-screen space-y-4 font-sans text-slate-800">
+  
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div>
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+          Quản lý Đơn Booking
+        </h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#4c5092] text-white">
+          {{ filteredBookings().length }} / {{ bookings().length }} đơn
+        </span>
+      </div>
+      <p class="text-[10px] sm:text-xs text-slate-500 font-mono mt-1 break-all">
+        GET https://synthesis-boxer-jarring.ngrok-free.dev/sel/firebase/all
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <button
+        (click)="loadData()"
+        [disabled]="isLoading()"
+        class="flex-1 sm:flex-none justify-center px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+      >
+        <svg class="w-4 h-4" [class.animate-spin]="isLoading()" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <span class="sm:hidden">Làm mới</span>
+        <span class="hidden sm:inline">Làm mới API</span>
+      </button>
+
+      <button
+        (click)="navigateToCreate()"
+        class="flex-1 sm:flex-none justify-center px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span>Tạo Mới</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- BỘ LỌC CHO MOBILE (Đóng/Mở linh hoạt) -->
+  <div class="md:hidden bg-[#232e46] rounded-xl border-none shadow-md overflow-hidden transition-all duration-300">
+    
+    <!-- Thanh Header bấm để Đóng/Mở -->
+    <div 
+      (click)="isMobileFilterOpen.set(!isMobileFilterOpen())"
+      class="p-4 flex items-center justify-between cursor-pointer select-none bg-[#283550] hover:bg-[#2d3b59] transition-colors"
+    >
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 00-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+        </svg>
+        <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">
+          Bộ lọc dữ liệu
+        </span>
+        
+        <!-- Badge đếm số bộ lọc đang kích hoạt (Nếu có) -->
+        @if (filterCode() || filterStatus() !== 'ALL' || filterPol() !== 'ALL' || filterPod() !== 'ALL' || filterCustomer() || filterCommodity()){
+          <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+        }
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button 
+          (click)="$event.stopPropagation(); resetFilters()" 
+          class="text-[11px] text-slate-400 hover:text-rose-300 underline cursor-pointer transition-colors flex items-center gap-1"
+        >
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Xóa lọc
+        </button>
+
+        <!-- Icon mũi tên xoay theo trạng thái đóng/mở -->
+        <svg 
+          class="w-4 h-4 text-slate-400 transition-transform duration-300" 
+          [class.rotate-180]="isMobileFilterOpen()"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Nội dung các ô lọc (Ẩn/Hiện dựa vào Signal/Variable) -->
+    @if (isMobileFilterOpen()) {
+      <div class="p-4 border-t border-[#2e3c5a] space-y-3 animate-fadeIn">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Mã Booking</label>
+            <input type="text" [(ngModel)]="filterCode" placeholder="Nhập mã..." class="w-full bg-[#151c2c] border border-[#34405a] rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"/>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Trạng thái</label>
+            <select [(ngModel)]="filterStatus" class="w-full bg-[#151c2c] border border-[#34405a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="ALL">Tất cả</option>
+              <option value="PENDING">PENDING</option>
+              <option value="CONFIRMED">CONFIRMED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">POL (Cảng đi)</label>
+            <select [(ngModel)]="filterPol" class="w-full bg-[#151c2c] border border-[#34405a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="ALL">Tất cả POL</option>
+              @for (p of polList(); track p) { <option [value]="p">{{ p }}</option> }
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">POD (Cảng đến)</label>
+            <select [(ngModel)]="filterPod" class="w-full bg-[#151c2c] border border-[#34405a] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="ALL">Tất cả POD</option>
+              @for (p of podList(); track p) { <option [value]="p">{{ p }}</option> }
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Khách hàng</label>
+            <input type="text" [(ngModel)]="filterCustomer" placeholder="Tên khách hàng..." class="w-full bg-[#151c2c] border border-[#34405a] rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"/>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Hàng hóa</label>
+            <input type="text" [(ngModel)]="filterCommodity" placeholder="Loại hàng..." class="w-full bg-[#151c2c] border border-[#34405a] rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"/>
+          </div>
+        </div>
+
+        <!-- Nút Đóng lại sau khi chọn xong -->
+        <button 
+          (click)="isMobileFilterOpen.set(false)"
+          class="w-full mt-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1 shadow-sm"
+        >
+          Áp dụng & Đóng bộ lọc
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Main Data Area -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    
+    <!-- Header Tím Than -->
+    <div class="bg-[#373b75] text-white px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <h2 class="font-bold text-xs sm:text-sm tracking-wide uppercase">GIỎ HÀNG BOOKING</h2>
+      </div>
+    </div>
+
+    <!-- 1. GIAO DIỆN DESKTOP (Ẩn trên màn hình nhỏ < md) -->
+    <div class="hidden md:block overflow-x-auto min-h-[400px]">
+      <table class="w-full text-left text-xs border-collapse">
+        <thead class="bg-white border-b border-slate-200">
+          <!-- Dòng 1: Tiêu đề cột -->
+          <tr class="text-slate-600 text-[11px] uppercase tracking-wider font-bold">
+            <th class="px-4 pt-3 pb-2 whitespace-nowrap"><button (click)="onSort('code')" class="flex items-center gap-1 hover:text-slate-900 cursor-pointer"><span>Mã Shipment</span> <span>↕</span></button></th>
+            <th class="px-4 pt-3 pb-2 whitespace-nowrap">Trạng thái</th>
+            <th class="px-4 pt-3 pb-2 whitespace-nowrap">Tuyến (POL &rarr; POD)</th>
+            <th class="px-4 pt-3 pb-2 whitespace-nowrap">Tàu / Khách Hàng</th>
+            <th class="px-4 pt-3 pb-2 whitespace-nowrap">Hàng hóa / Cont</th>
+            <th class="px-4 pt-3 pb-2 whitespace-nowrap text-right">Thao tác</th>
+          </tr>
+          
+          <!-- Dòng 2: Bộ lọc dữ liệu (Filters tích hợp trong Header) -->
+          <tr class="bg-slate-50 border-t border-slate-100 shadow-inner">
+            <!-- Lọc Mã Booking -->
+            <th class="px-2 py-2 font-normal align-top">
+              <input type="text" [(ngModel)]="filterCode" placeholder="Lọc mã..." class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"/>
+            </th>
+            
+            <!-- Lọc Trạng thái -->
+            <th class="px-2 py-2 font-normal align-top">
+              <select [(ngModel)]="filterStatus" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-all">
+                <option value="ALL">Tất cả</option>
+                <option value="PENDING">PENDING</option>
+                <option value="CONFIRMED">CONFIRMED</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </th>
+            
+            <!-- Lọc Tuyến (POL / POD) -->
+            <th class="px-2 py-2 font-normal align-top min-w-[200px]">
+              <div class="flex flex-col xl:flex-row gap-1.5">
+                <select [(ngModel)]="filterPol" class="flex-1 bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-all">
+                  <option value="ALL">Tất cả POL</option>
+                  @for (p of polList(); track p) { <option [value]="p">{{ p }}</option> }
+                </select>
+                <select [(ngModel)]="filterPod" class="flex-1 bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-all">
+                  <option value="ALL">Tất cả POD</option>
+                  @for (p of podList(); track p) { <option [value]="p">{{ p }}</option> }
+                </select>
+              </div>
+            </th>
+            
+            <!-- Lọc Khách hàng -->
+            <th class="px-2 py-2 font-normal align-top">
+              <input type="text" [(ngModel)]="filterCustomer" placeholder="Lọc khách hàng..." class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"/>
+            </th>
+            
+            <!-- Lọc Hàng hóa -->
+            <th class="px-2 py-2 font-normal align-top">
+              <input type="text" [(ngModel)]="filterCommodity" placeholder="Lọc hàng hóa..." class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"/>
+            </th>
+            
+            <!-- Nút Xóa Lọc -->
+            <th class="px-2 py-2 font-normal text-right align-top">
+              <button (click)="resetFilters()" class="inline-flex items-center gap-1 mt-1 text-[11px] text-slate-500 hover:text-rose-600 transition-colors cursor-pointer group">
+                <svg class="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Xóa lọc
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @if (isLoading()) {
+            <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
+          } @else if (paginatedBookings().length === 0) {
+            <tr><td colspan="6" class="px-6 py-12 text-center text-slate-400">Không tìm thấy đơn booking nào.</td></tr>
+          } @else {
+            @for (b of paginatedBookings(); track b.id) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <a [routerLink]="['/bookings', b.id, 'edit']" class="font-bold text-[#2563eb] hover:underline">{{ b.shipment?.code || b.id }}</a>
+                  <span class="text-[10px] text-slate-400 block font-mono">ID: {{ b.id }}</span>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                  @if (b.status === 'CONFIRMED') { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">CONFIRMED</span> }
+                  @else if (b.status === 'CANCELLED' || (b.shipment?.code || '').includes('CANCEL')) { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">CANCELLED</span> }
+                  @else { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">PENDING</span> }
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="font-semibold text-slate-800">{{ b.shipment?.pol?.name }} &rarr; {{ b.shipment?.pod?.name }}</div>
+                  <span class="text-[10px] text-slate-500 block truncate max-w-[150px]">{{ b.route?.voyage_0?.load_terminal_name || '' }}</span>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <p class="font-bold text-slate-800">{{ b.shipment?.customer?.short_name || 'N/A' }}</p>
+                  <p class="text-[10px] font-mono text-slate-500">{{ b.route?.voyage_0?.vessel_name || '-' }}</p>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <span class="font-bold text-[#2563eb]">{{ b.volume?.volume_0?.package_type?.name || '20DC' }}</span> <span class="text-slate-500">x{{ b.volume?.volume_0?.quantity || 1 }}</span>
+                  <p class="text-[10px] text-slate-500 truncate max-w-[120px]">{{ b.volume?.volume_0?.commodity?.name || b.document?.book_commodity }}</p>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button (click)="navigateToEdit(b.id)" class="text-[#2563eb] hover:bg-blue-50 p-1.5 rounded-md transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                    <button (click)="confirmDelete(b.id)" class="text-[#ef4444] hover:bg-red-50 p-1.5 rounded-md transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2. GIAO DIỆN MOBILE (Chỉ hiện trên màn hình < md, dạng Card) -->
+    <div class="md:hidden p-3 bg-slate-50/50">
+      @if (isLoading()) {
+        <div class="text-center py-8 text-xs text-slate-500">Đang tải dữ liệu...</div>
+      } @else if (paginatedBookings().length === 0) {
+        <div class="text-center py-8 text-xs text-slate-400">Không có dữ liệu phù hợp.</div>
+      } @else {
+        <div class="space-y-3">
+          @for (b of paginatedBookings(); track b.id) {
+            <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+              
+              <!-- Card Header -->
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                <div>
+                  <a [routerLink]="['/bookings', b.id, 'edit']" class="font-bold text-[#2563eb] text-sm">{{ b.shipment?.code || b.id }}</a>
+                  <span class="block text-[10px] text-slate-400 font-mono">ID: {{ b.id }}</span>
+                </div>
+                <div>
+                  @if (b.status === 'CONFIRMED') { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">CONFIRMED</span> }
+                  @else if (b.status === 'CANCELLED' || (b.shipment?.code || '').includes('CANCEL')) { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">CANCELLED</span> }
+                  @else { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">PENDING</span> }
+                </div>
+              </div>
+
+              <!-- Card Body -->
+              <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div>
+                  <span class="block text-[10px] text-slate-400 font-semibold mb-0.5">TUYẾN ĐƯỜNG</span>
+                  <div class="font-semibold text-slate-800 line-clamp-1">{{ b.shipment?.pol?.name }}</div>
+                  <div class="text-slate-400 text-[10px]">&darr;</div>
+                  <div class="font-semibold text-slate-800 line-clamp-1">{{ b.shipment?.pod?.name }}</div>
+                </div>
+                <div class="space-y-2">
+                  <div>
+                    <span class="block text-[10px] text-slate-400 font-semibold mb-0.5">KHÁCH HÀNG / TÀU</span>
+                    <div class="font-bold text-slate-800 truncate">{{ b.shipment?.customer?.short_name || 'N/A' }}</div>
+                    <div class="text-[10px] font-mono text-slate-500 truncate">{{ b.route?.voyage_0?.vessel_name || '-' }}</div>
+                  </div>
+                  <div>
+                    <span class="block text-[10px] text-slate-400 font-semibold mb-0.5">CONTAINER</span>
+                    <span class="font-bold text-[#2563eb]">{{ b.volume?.volume_0?.package_type?.name || '20DC' }}</span> <span class="text-slate-600">x{{ b.volume?.volume_0?.quantity || 1 }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Footer / Actions -->
+              <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button (click)="navigateToEdit(b.id)" class="px-3 py-1.5 text-xs font-semibold text-[#2563eb] bg-blue-50 rounded-md flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  Sửa
+                </button>
+                <button (click)="confirmDelete(b.id)" class="px-3 py-1.5 text-xs font-semibold text-[#ef4444] bg-red-50 rounded-md flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  Xóa
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Phân trang (Responsive) -->
+    <div class="px-4 py-3 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <span class="text-slate-500 font-medium text-center sm:text-left w-full sm:w-auto">
+        Trang {{ currentPage() }} / {{ totalPages() }} ({{ filteredBookings().length }} kết quả)
+      </span>
+
+      <div class="flex items-center justify-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+        <button (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 1" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 disabled:opacity-40 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed">Trước</button>
+        @for (i of [].constructor(totalPages()); track $index) {
+          <!-- Ẩn các nút trang ở giữa trên mobile nếu quá nhiều, hiển thị trên sm -->
+          <button (click)="goToPage($index + 1)" 
+            class="px-2.5 py-1.5 rounded-md text-xs font-bold transition-colors cursor-pointer"
+            [class.bg-[#373b75]]="currentPage() === $index + 1"
+            [class.text-white]="currentPage() === $index + 1"
+            [class.bg-white]="currentPage() !== $index + 1"
+            [class.border]="currentPage() !== $index + 1"
+            [class.border-slate-300]="currentPage() !== $index + 1"
+            [class.hidden]="totalPages() > 5 && (currentPage() !== $index + 1) && ($index > 0) && ($index < totalPages() - 1) && !((currentPage() - 1 === $index) || (currentPage() + 1 === $index))">
+            {{ $index + 1 }}
+          </button>
+        }
+        <button (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() === totalPages()" class="px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 disabled:opacity-40 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed">Sau</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Xác nhận xóa (Responsive Max Width) -->
+  @if (deleteModalOpen()) {
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center mx-4">
+        <!-- Content Modal giữ nguyên như cũ -->
+        <div class="w-12 h-12 rounded-full bg-rose-100 text-[#ef4444] flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <h3 class="text-base font-bold text-slate-900 mb-1">Xác nhận xóa booking?</h3>
+        <p class="text-xs text-slate-500 mb-5">Hành động này sẽ xóa booking khỏi hệ thống và không thể hoàn tác.</p>
+        <div class="flex items-center justify-center gap-3">
+          <button (click)="deleteModalOpen.set(false)" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer">Hủy bỏ</button>
+          <button (click)="executeDelete()" class="flex-1 px-4 py-2 bg-[#ef4444] hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer">Xác nhận xóa</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

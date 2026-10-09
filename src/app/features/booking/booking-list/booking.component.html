@@ -1,0 +1,800 @@
+<div class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- ==================== AUTHENTICATION OVERLAY ==================== -->
+  @if (!isAuthenticated) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 bg-opacity-80 p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+      
+      <!-- Brand Header -->
+      <div class="bg-slate-900 text-white p-6 text-center relative">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white font-bold text-xl mb-2">SEL</div>
+        <h2 class="text-xl font-bold tracking-wide">SEL LOGISTICS SYSTEM</h2>
+        <p class="text-xs text-slate-400 mt-1">FCL Container Door-to-Door E-Commerce Platform</p>
+      </div>
+
+      <!-- Login Form -->
+      @if (authTab === 'login') {
+      <div class="p-6 space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">Đăng Nhập Hệ Thống</h3>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Email / Tài Khoản</label>
+          <input type="email" [(ngModel)]="loginData.email" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="customer@sel.com.vn">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật Khẩu</label>
+          <input type="password" [(ngModel)]="loginData.password" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="••••••••">
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <button (click)="authTab = 'forgot'" class="text-blue-600 hover:underline">Quên mật khẩu?</button>
+          <button (click)="authTab = 'register'" class="text-blue-600 hover:underline">Tạo tài khoản mới</button>
+        </div>
+        <button (click)="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg shadow-md transition text-sm">
+          ĐĂNG NHẬP <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+      </div>
+      }
+
+      <!-- Forgot Password -->
+      @if (authTab === 'forgot') {
+      <div class="p-6 space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">Khôi Phục Mật Khẩu</h3>
+        <p class="text-xs text-slate-500">Nhập email đăng ký để nhận liên kết xác thực cài đặt lại mật khẩu.</p>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Email Đăng Ký</label>
+          <input type="email" [(ngModel)]="resetEmail" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="customer@sel.com.vn">
+        </div>
+        <button (click)="resetPassword()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg text-sm">Gửi Yêu Cầu Khôi Phục</button>
+        <button (click)="authTab = 'login'" class="w-full text-xs text-slate-600 hover:underline text-center block">Quay lại Đăng nhập</button>
+      </div>
+      }
+
+      <!-- Register Form -->
+      @if (authTab === 'register') {
+      <div class="p-6 space-y-3">
+        <h3 class="text-lg font-bold text-slate-800">Đăng Ký Tài Khoản Khách Hàng</h3>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tên Doanh Nghiệp / Khách Hàng</label>
+          <input type="text" [(ngModel)]="regData.company" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none" placeholder="Công ty TNHH Xuất Nhập Khẩu ABC">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+          <input type="email" [(ngModel)]="regData.email" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none" placeholder="info@abc.com.vn">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Số Điện Thoại</label>
+          <input type="text" [(ngModel)]="regData.phone" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none" placeholder="0901234567">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật Khẩu</label>
+          <input type="password" [(ngModel)]="regData.password" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none" placeholder="••••••••">
+        </div>
+        <button (click)="register()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow">XÁC NHẬN ĐĂNG KÝ</button>
+        <button (click)="authTab = 'login'" class="w-full text-xs text-slate-600 hover:underline text-center block">Quay lại Đăng nhập</button>
+      </div>
+      }
+
+    </div>
+  </div>
+  }
+
+  <!-- ==================== MAIN HEADER & TOOLBAR ==================== -->
+  <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Logo & System Name -->
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-black text-lg">SEL</div>
+        <div>
+          <h1 class="font-bold tracking-tight text-sm md:text-base">SEL LOGISTICS FCL PLATFORM</h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Container Door-to-Door E-Commerce Fulfillment</p>
+        </div>
+      </div>
+
+      <!-- View Toggle Switches (Top & Bottom Frame Controls) -->
+      <div class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-medium">
+        <button (click)="toggleFrame('booking')" [ngClass]="{'bg-blue-600 text-white': showBookingFrame, 'text-slate-400': !showBookingFrame}" class="px-3 py-1.5 rounded-md transition flex items-center gap-1.5">
+          <i class="fas fa-shopping-cart"></i> <span>Giỏ Booking ({{filteredBookings.length}})</span>
+        </button>
+        <button (click)="toggleFrame('shipment')" [ngClass]="{'bg-emerald-600 text-white': showShipmentFrame, 'text-slate-400': !showShipmentFrame}" class="px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ml-1">
+          <i class="fas fa-shipping-fast"></i> <span>Chuyến Shipment ({{filteredShipments.length}})</span>
+        </button>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center space-x-3 text-xs">
+        <button (click)="openVesselScheduleModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-1">
+          <i class="fas fa-calendar-alt"></i> <span>Lịch Tàu & Đặt Chỗ</span>
+        </button>
+        
+        <button (click)="openDebtModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-1">
+          <i class="fas fa-file-invoice-dollar"></i> <span>Công Nợ & Q.Hạn</span>
+        </button>
+
+        <!-- User Profile Dropdown / Logout -->
+        @if (isAuthenticated) {
+        <div class="flex items-center space-x-2 border-l border-slate-700 pl-3">
+          <span class="hidden md:inline font-semibold text-slate-300">{{currentUser.company}}</span>
+          <button (click)="logout()" title="Đăng xuất" class="text-slate-400 hover:text-red-400 p-1">
+            <i class="fas fa-sign-out-alt text-base"></i>
+          </button>
+        </div>
+        }
+      </div>
+
+    </div>
+
+    <!-- GLOBAL FILTER & SEARCH TOOLBAR -->
+    <div class="bg-slate-800 border-t border-slate-700 py-2.5 px-4">
+      <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
+        <input type="text" [(ngModel)]="filters.searchCode" placeholder="Mã Booking/Shipment..." class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white outline-none focus:border-blue-500">
+        <input type="text" [(ngModel)]="filters.customer" placeholder="Tên Khách Hàng..." class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white outline-none focus:border-blue-500">
+        <select [(ngModel)]="filters.port" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white outline-none focus:border-blue-500">
+          <option value="">Tất cả Cảng (POD/POL)</option>
+          <option value="Cát Lái (VN)">Cát Lái (VN)</option>
+          <option value="Hải Phòng (VN)">Hải Phòng (VN)</option>
+          <option value="Singapore (SG)">Singapore (SG)</option>
+          <option value="Shanghai (CN)">Shanghai (CN)</option>
+          <option value="Los Angeles (US)">Los Angeles (US)</option>
+        </select>
+        <input type="date" [(ngModel)]="filters.fromDate" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white outline-none focus:border-blue-500">
+        <input type="date" [(ngModel)]="filters.toDate" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white outline-none focus:border-blue-500">
+        <div class="flex gap-1">
+          <button (click)="resetFilters()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-semibold py-1.5">
+            <i class="fas fa-redo-alt mr-1"></i> Xóa Lọc
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT AREA (TOP & BOTTOM LAYOUT) ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col gap-6">
+
+    <!-- KHUNG TRÊN: TOP FRAME - SEL_BOOKING (Đơn Đặt Chỗ/Giỏ Hàng Chờ Xử Lý) -->
+    @if (showBookingFrame) {
+    <section class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col transition-all duration-300" [ngClass]="{'flex-1': !showShipmentFrame}">
+      
+      <!-- Section Header -->
+      <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-2">
+          <i class="fas fa-shopping-cart text-blue-400"></i>
+          <h2 class="font-bold text-sm md:text-base tracking-wide">KHUNG TRÊN: GIỎ HÀNG BOOKING CHỜ XỬ LÝ (SEL_BOOKING)</h2>
+          <span class="bg-blue-500/30 text-blue-200 text-xs px-2 py-0.5 rounded-full">{{filteredBookings.length}} Đơn</span>
+        </div>
+        <button (click)="openCreateBookingModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow flex items-center gap-1">
+          <i class="fas fa-plus-circle"></i> <span>Tạo Booking Mới</span>
+        </button>
+      </div>
+
+      <!-- Booking Table / Desktop View -->
+      <div class="hidden md:block overflow-x-auto flex-1 overflow-y-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider sticky top-0 z-10">
+              <th class="p-3">Mã Booking</th>
+              <th class="p-3">Khách Hàng</th>
+              <th class="p-3">Hành Trình (POL -> POD)</th>
+              <th class="p-3">Khung Giờ Lấy Xe</th>
+              <th class="p-3">Loại Cont/SL</th>
+              <th class="p-3">Ngày Khởi Hành</th>
+              <th class="p-3 text-right">Tổng Cước Est.</th>
+              <th class="p-3 text-center">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (item of filteredBookings; track item.id) {
+            <tr class="hover:bg-blue-50/50 transition">
+              <td class="p-3 font-bold text-blue-700">{{item.bookingCode}}</td>
+              <td class="p-3 font-medium">{{item.customerName}}</td>
+              <td class="p-3">
+                <span class="font-semibold text-slate-800">{{item.pol}}</span> 
+                <i class="fas fa-long-arrow-alt-right mx-1 text-slate-400"></i> 
+                <span class="font-semibold text-slate-800">{{item.pod}}</span>
+              </td>
+              <td class="p-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">{{item.pickupRange}}</span></td>
+              <td class="p-3"><span class="font-bold text-indigo-600">{{item.containerType}}</span> x{{item.quantity}}</td>
+              <td class="p-3">{{item.etd | date:'dd/MM/yyyy'}}</td>
+              <td class="p-3 text-right font-bold text-emerald-700">${{item.estimatedTotal | number:'1.2-2'}}</td>
+              <td class="p-3 text-center space-x-1">
+                <button (click)="convertToShipment(item)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-xs font-semibold shadow" title="Chuyển sang Chuyến Shipment thực tế">
+                  Chuyển Shipment <i class="fas fa-arrow-down ml-1"></i>
+                </button>
+                <button (click)="editBooking(item)" class="text-blue-600 hover:bg-blue-100 p-1 rounded" title="Sửa"><i class="fas fa-edit"></i></button>
+                <button (click)="deleteBooking(item.id)" class="text-red-600 hover:bg-red-100 p-1 rounded" title="Xóa"><i class="fas fa-trash"></i></button>
+              </td>
+            </tr>
+            }
+            @if (filteredBookings.length === 0) {
+            <tr>
+              <td colspan="8" class="text-center py-6 text-slate-400">Không tìm thấy đơn booking nào phù hợp với bộ lọc.</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Booking Cards / Mobile View -->
+      <div class="block md:hidden divide-y divide-slate-200 overflow-y-auto flex-1">
+        @for (item of filteredBookings; track item.id) {
+        <div class="p-4 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-blue-700 text-sm">{{item.bookingCode}}</span>
+            <span class="bg-amber-100 text-amber-800 text-xs font-mono px-2 py-0.5 rounded">{{item.pickupRange}}</span>
+          </div>
+          <div class="text-xs text-slate-600">Khách: <strong>{{item.customerName}}</strong></div>
+          <div class="text-xs font-medium">
+            <span>{{item.pol}}</span> <i class="fas fa-arrow-right mx-1 text-slate-400"></i> <span>{{item.pod}}</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span>Loại: <b>{{item.containerType}} (x{{item.quantity}})</b></span>
+            <span class="font-bold text-emerald-600">${{item.estimatedTotal | number:'1.2-2'}}</span>
+          </div>
+          <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+            <button (click)="editBooking(item)" class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">Sửa</button>
+            <button (click)="deleteBooking(item.id)" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Xóa</button>
+            <button (click)="convertToShipment(item)" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Chuyển Shipment</button>
+          </div>
+        </div>
+        }
+      </div>
+
+    </section>
+    }
+
+    <!-- KHUNG DƯỚI: BOTTOM FRAME - SEL_SHIPMENT (Quản Lý Chuyến Vận Chuyển Thực Tế) -->
+    @if (showShipmentFrame) {
+    <section class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col transition-all duration-300" [ngClass]="{'flex-1': !showBookingFrame}">
+      
+      <!-- Section Header -->
+      <div class="bg-gradient-to-r from-emerald-900 to-teal-900 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-2">
+          <i class="fas fa-shipping-fast text-emerald-400"></i>
+          <h2 class="font-bold text-sm md:text-base tracking-wide">KHUNG DƯỚI: CHUYẾN VẬN CHUYỂN THỰC TẾ (SEL_SHIPMENT)</h2>
+          <span class="bg-emerald-500/30 text-emerald-200 text-xs px-2 py-0.5 rounded-full">{{filteredShipments.length}} Shipment</span>
+        </div>
+      </div>
+
+      <!-- Shipment Table / Desktop View -->
+      <div class="hidden md:block overflow-x-auto flex-1 overflow-y-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider sticky top-0 z-10">
+              <th class="p-3">Mã Shipment</th>
+              <th class="p-3">Số Cont / Seal</th>
+              <th class="p-3">Tàu / Chuyến</th>
+              <th class="p-3">Hành Trình</th>
+              <th class="p-3">Trạng Thái (Progress)</th>
+              <th class="p-3">Cước Phí Total</th>
+              <th class="p-3 text-center">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (ship of filteredShipments; track ship.id) {
+            <tr class="hover:bg-emerald-50/50 transition">
+              <td class="p-3">
+                <div class="font-bold text-emerald-700">{{ship.shipmentCode}}</div>
+                <div class="text-slate-400 text-[10px]">Ref: {{ship.bookingCode}}</div>
+              </td>
+              <td class="p-3">
+                <div class="font-mono font-semibold text-slate-800">{{ship.containerNo}}</div>
+                <div class="text-slate-500 text-[10px]">Seal: {{ship.sealNo}}</div>
+              </td>
+              <td class="p-3">
+                <div class="font-medium text-slate-800">{{ship.vesselName}}</div>
+                <div class="text-slate-500 text-[10px]">Voy: {{ship.voyageNo}}</div>
+              </td>
+              <td class="p-3">
+                <div><span class="font-semibold">{{ship.pol}}</span> &rarr; <span class="font-semibold">{{ship.pod}}</span></div>
+                <div class="text-slate-400 text-[10px]">ETD: {{ship.etd | date:'dd/MM/yyyy'}}</div>
+              </td>
+              <td class="p-3">
+                <span class="status-badge" [ngClass]="{
+                  'bg-amber-100 text-amber-800': ship.stepProgress < 3,
+                  'bg-blue-100 text-blue-800': ship.stepProgress >= 3 && ship.stepProgress < 6,
+                  'bg-emerald-100 text-emerald-800': ship.stepProgress === 6
+                }">
+                  <i class="fas fa-circle text-[8px]"></i> Step {{ship.stepProgress}}/6: {{ship.statusText}}
+                </span>
+              </td>
+              <td class="p-3 font-bold text-slate-800">${{ship.financials.totalAmount | number:'1.2-2'}}</td>
+              <td class="p-3 text-center space-x-1">
+                <button (click)="openShipmentDetail(ship)" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-xs font-semibold shadow">
+                  Chi Tiết <i class="fas fa-eye ml-1"></i>
+                </button>
+                <button (click)="openFiataBillModal(ship)" class="bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded text-xs font-semibold" title="Mẫu Vận Đơn FIATA">
+                  <i class="fas fa-file-contract"></i> B/L
+                </button>
+              </td>
+            </tr>
+            }
+            @if (filteredShipments.length === 0) {
+            <tr>
+              <td colspan="7" class="text-center py-6 text-slate-400">Không có chuyến shipment nào khớp với điều kiện tìm kiếm.</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Shipment Cards / Mobile View -->
+      <div class="block md:hidden divide-y divide-slate-200 overflow-y-auto flex-1">
+        @for (ship of filteredShipments; track ship.id) {
+        <div class="p-4 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-emerald-700 text-sm">{{ship.shipmentCode}}</span>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">Step {{ship.stepProgress}}/6</span>
+          </div>
+          <div class="text-xs font-mono text-slate-700">Cont: <b>{{ship.containerNo}}</b> | Seal: {{ship.sealNo}}</div>
+          <div class="text-xs text-slate-600">Tàu: <b>{{ship.vesselName}}</b> ({{ship.voyageNo}})</div>
+          <div class="flex justify-between items-center text-xs pt-1">
+            <span class="font-bold text-slate-800">${{ship.financials.totalAmount | number:'1.2-2'}}</span>
+            <div class="space-x-1">
+              <button (click)="openFiataBillModal(ship)" class="px-2 py-1 bg-slate-200 text-slate-800 rounded">B/L</button>
+              <button (click)="openShipmentDetail(ship)" class="px-3 py-1 bg-blue-600 text-white rounded font-semibold">Chi tiết</button>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+
+    </section>
+    }
+
+  </main>
+
+
+  <!-- ==================== MODALS & OVERLAYS ==================== -->
+
+  <!-- 1. MODAL: CHI TIẾT SHIPMENT OVERLAY (FULL FEATURES) -->
+  @if (activeModal === 'shipmentDetail') {
+  <div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-300">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div>
+          <h3 class="text-lg font-bold flex items-center gap-2">
+            <span>SHIPMENT DETAIL: {{selectedShipment.shipmentCode}}</span>
+            <span class="text-xs bg-blue-500 text-white px-2.5 py-0.5 rounded-full font-mono">{{selectedShipment.containerType}}</span>
+          </h3>
+          <p class="text-xs text-slate-400">Booking Ref: {{selectedShipment.bookingCode}} | Khách hàng: {{selectedShipment.customerName}}</p>
+        </div>
+        <button (click)="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-6 text-xs flex-1">
+        
+        <!-- Push Notification Toggle & Quick Contact Agent -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" [(ngModel)]="selectedShipment.pushNotificationEnabled" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+            <span class="font-semibold text-slate-700">Nhận Thông Báo Push Notification Trạng Thái Realtime</span>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <span class="text-slate-500 font-medium hidden sm:inline">Đại lý xử lý:</span>
+            <a href="https://zalo.me" target="_blank" class="bg-blue-500 text-white px-2.5 py-1 rounded font-semibold flex items-center gap-1 hover:bg-blue-600"><i class="fas fa-comment"></i> Zalo</a>
+            <a href="https://facebook.com" target="_blank" class="bg-indigo-600 text-white px-2.5 py-1 rounded font-semibold flex items-center gap-1 hover:bg-indigo-700"><i class="fab fa-facebook"></i> FB</a>
+            <a href="tel:19001234" class="bg-emerald-600 text-white px-2.5 py-1 rounded font-semibold flex items-center gap-1 hover:bg-emerald-700"><i class="fas fa-phone"></i> Call</a>
+          </div>
+        </div>
+
+        <!-- Technical Container & Truck Specs Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-blue-50/50 p-3.5 rounded-lg border border-blue-100 space-y-1.5">
+            <div class="font-bold text-blue-900 border-b border-blue-200 pb-1 mb-2">THÔNG TIN CONTAINER & SEAL</div>
+            <div>Số Container: <b class="font-mono text-slate-800">{{selectedShipment.containerNo}}</b></div>
+            <div>Số Seal Vành: <b class="font-mono text-slate-800">{{selectedShipment.sealNo}}</b></div>
+            <div>Loại Vỏ: <b>{{selectedShipment.containerType}}</b></div>
+            <div>Trọng lượng VGM: <b class="text-emerald-700">{{selectedShipment.vgmWeight}} KGS</b></div>
+          </div>
+
+          <div class="bg-amber-50/50 p-3.5 rounded-lg border border-amber-100 space-y-1.5">
+            <div class="font-bold text-amber-900 border-b border-amber-200 pb-1 mb-2">XE KÉO ĐẦU KHO NHẬN (PICKUP)</div>
+            <div>Biển Số Xe Kéo: <b>{{selectedShipment.pickupTruckNo}}</b></div>
+            <div>Tài Xế: <b>{{selectedShipment.pickupDriverName}}</b></div>
+            <div>SĐT Tài Xế: <b class="font-mono text-blue-700">{{selectedShipment.pickupDriverPhone}}</b></div>
+            <div>Khung Giờ Lấy Cont: <b>{{selectedShipment.pickupRange}}</b></div>
+          </div>
+
+          <div class="bg-teal-50/50 p-3.5 rounded-lg border border-teal-100 space-y-1.5">
+            <div class="font-bold text-teal-900 border-b border-teal-200 pb-1 mb-2">XE KÉO ĐẦU KHO GIAO (DELIVERY)</div>
+            <div>Biển Số Xe Kéo: <b>{{selectedShipment.deliveryTruckNo}}</b></div>
+            <div>Tài Xế: <b>{{selectedShipment.deliveryDriverName}}</b></div>
+            <div>SĐT Tài Xế: <b class="font-mono text-blue-700">{{selectedShipment.deliveryDriverPhone}}</b></div>
+            <div>Cảng Đích Dự Kiến: <b>{{selectedShipment.pod}}</b></div>
+          </div>
+        </div>
+
+        <!-- Realtime Progress Timeline (6 Steps Door-to-Door) -->
+        <div>
+          <h4 class="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2">
+            <i class="fas fa-tasks text-blue-600"></i> REALTIME DOOR-TO-DOOR TIMELINE (6 BƯỚC TRỌN GÓI)
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+            @for (st of timelineSteps; track st.step) {
+            <div class="p-2.5 rounded-lg border text-center relative flex flex-col justify-between transition" [ngClass]="{
+              'bg-emerald-50 border-emerald-500 text-emerald-900': selectedShipment.stepProgress >= st.step,
+              'bg-slate-50 border-slate-200 text-slate-400': selectedShipment.stepProgress < st.step
+            }">
+              <div class="text-[10px] font-bold uppercase tracking-wider mb-1">Bước {{st.step}}</div>
+              <div class="font-semibold text-xs my-1">{{st.title}}</div>
+              <div class="text-[10px] mt-2 font-mono">
+                @if (selectedShipment.stepProgress >= st.step) {
+                  <span class="text-emerald-700 font-bold"><i class="fas fa-check-circle"></i> Hoàn thành</span>
+                } @else {
+                  <span class="text-slate-400">Chờ xử lý</span>
+                }
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Price & VAT Financial Breakdown -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h4 class="font-bold text-slate-800 mb-2 text-sm">BẢNG CHI TIẾT CƯỚC PHÍ VẬN TẢI & THUẾ VAT</h4>
+          <table class="w-full text-left border-collapse bg-white rounded border border-slate-200">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                <th class="p-2">Hạng Mục Chi Phí</th>
+                <th class="p-2 text-right">Đơn Giá (USD)</th>
+                <th class="p-2 text-center">Thuế VAT</th>
+                <th class="p-2 text-right">Thành Tiền (USD)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr>
+                <td class="p-2 font-medium">Cước Biển Chính (Ocean Freight)</td>
+                <td class="p-2 text-right">${{selectedShipment.financials.oceanFreight | number:'1.2-2'}}</td>
+                <td class="p-2 text-center"><span class="bg-slate-100 px-1.5 py-0.5 rounded">0%</span></td>
+                <td class="p-2 text-right font-semibold">${{selectedShipment.financials.oceanFreight | number:'1.2-2'}}</td>
+              </tr>
+              <tr>
+                <td class="p-2 font-medium">Phụ Phí Bốc Xếp (THC Charge)</td>
+                <td class="p-2 text-right">${{selectedShipment.financials.thcCharge | number:'1.2-2'}}</td>
+                <td class="p-2 text-center"><span class="bg-slate-100 px-1.5 py-0.5 rounded">0%</span></td>
+                <td class="p-2 text-right font-semibold">${{selectedShipment.financials.thcCharge | number:'1.2-2'}}</td>
+              </tr>
+              <tr>
+                <td class="p-2 font-medium">Cước Xe Kéo Road Trucking</td>
+                <td class="p-2 text-right">${{selectedShipment.financials.truckingFee | number:'1.2-2'}}</td>
+                <td class="p-2 text-center"><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">8% VAT</span></td>
+                <td class="p-2 text-right font-semibold">${{selectedShipment.financials.truckingFee * 1.08 | number:'1.2-2'}}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-100 font-bold border-t border-slate-200 text-slate-900">
+                <td colspan="3" class="p-2 text-right">TỔNG CỘNG TIỀN THANH TOÁN:</td>
+                <td class="p-2 text-right text-emerald-700 text-sm">${{selectedShipment.financials.totalAmount | number:'1.2-2'}}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Electronic Invoice & Delivery Confirmation Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          
+          <div class="bg-indigo-50/60 p-4 rounded-lg border border-indigo-100 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-indigo-900">HÓA ĐƠN ĐIỆN TỬ (VAT)</div>
+              <div class="text-slate-500 text-[11px]">Trạng thái: <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">PAID / ĐÃ THANH TOÁN</span></div>
+            </div>
+            <button (click)="downloadVATInvoice(selectedShipment)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded shadow flex items-center gap-1.5">
+              <i class="fas fa-file-pdf"></i> <span>Tải PDF</span>
+            </button>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <div class="font-bold text-slate-800">XÁC NHẬN GIAO HÀNG & ĐÁNH GIÁ</div>
+            <div class="flex items-center space-x-1 text-amber-400 text-base">
+              @for (star of [1,2,3,4,5]; track $index) {
+              <i (click)="selectedShipment.rating = star" class="cursor-pointer" [ngClass]="star <= selectedShipment.rating ? 'fas fa-star' : 'far fa-star'"></i>
+              }
+              <span class="text-xs text-slate-500 ml-2">({{selectedShipment.rating || 0}}/5 Sao)</span>
+            </div>
+            <button (click)="openTicketModal(selectedShipment)" class="text-red-600 hover:text-red-800 font-bold text-xs underline inline-block">
+              <i class="fas fa-exclamation-triangle mr-1"></i> Gửi Yêu Cầu Hỗ Trợ / Khiếu Nại
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-100 px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
+        <button (click)="closeModal()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded font-bold text-xs">Đóng Overlay</button>
+      </div>
+
+    </div>
+  </div>
+  }
+
+  <!-- 2. MODAL: FIATA BILL OF LADING (VIEW, EDIT, DELETE, PRINT) -->
+  @if (activeModal === 'fiataBill') {
+  <div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden border border-slate-300">
+      
+      <div class="bg-slate-900 text-white px-6 py-3 flex items-center justify-between shrink-0">
+        <h3 class="font-bold text-sm tracking-wide">MẪU VẬN ĐƠN ĐƯỜNG BIỂN CHUẨN QUỐC TẾ (FIATA MULTIMODAL BILL OF LADING)</h3>
+        <button (click)="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-4 flex-1">
+        
+        <!-- B/L Controls Toolbar -->
+        <div class="flex flex-wrap justify-between items-center bg-slate-100 p-2.5 rounded border border-slate-200 gap-2">
+          <div class="space-x-2">
+            <button (click)="isEditingBL = !isEditingBL" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold">
+              <i class="fas" [ngClass]="isEditingBL ? 'fa-save' : 'fa-edit'"></i> {{isEditingBL ? 'Lưu Thông Tin B/L' : 'Chỉnh Sửa Vận Đơn'}}
+            </button>
+            <button (click)="deleteBL(selectedShipment)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-bold">
+              <i class="fas fa-trash-alt"></i> Xóa Vận Đơn
+            </button>
+          </div>
+          <button (click)="printFIATABill()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold">
+            <i class="fas fa-print"></i> In / Tải FIATA B/L PDF
+          </button>
+        </div>
+
+        <!-- Printable FIATA B/L Document -->
+        <div id="fiata-bill-document" class="fiata-bill space-y-0 text-slate-900 mx-auto">
+          
+          <div class="text-center font-bold text-base tracking-widest border-b-2 border-black pb-2 mb-2">
+            FIATA MULTIMODAL TRANSPORT BILL OF LADING
+          </div>
+
+          <div class="fiata-grid">
+            <div class="fiata-cell">
+              <div class="font-bold text-[9px] uppercase">Shipper (Người Gửi Hàng):</div>
+              @if (!isEditingBL) { <div class="font-bold whitespace-pre-line">{{selectedShipment.blInfo.shipper}}</div> }
+              @if (isEditingBL) { <textarea [(ngModel)]="selectedShipment.blInfo.shipper" class="w-full border p-1 text-xs outline-none" rows="2"></textarea> }
+            </div>
+            <div class="fiata-cell">
+              <div class="font-bold text-[9px] uppercase">B/L No / Reference:</div>
+              <div class="font-mono font-bold text-sm">{{selectedShipment.shipmentCode}}-BL</div>
+              <div class="font-bold text-[9px] uppercase mt-2">Carrier Agent:</div>
+              <div>SEL LOGISTICS SYSTEM CO., LTD</div>
+            </div>
+          </div>
+
+          <div class="fiata-grid">
+            <div class="fiata-cell">
+              <div class="font-bold text-[9px] uppercase">Consignee (Người Nhận Hàng):</div>
+              @if (!isEditingBL) { <div class="whitespace-pre-line">{{selectedShipment.blInfo.consignee}}</div> }
+              @if (isEditingBL) { <textarea [(ngModel)]="selectedShipment.blInfo.consignee" class="w-full border p-1 text-xs outline-none" rows="2"></textarea> }
+            </div>
+            <div class="fiata-cell">
+              <div class="font-bold text-[9px] uppercase">Notify Party (Bên Nhận Thông Báo):</div>
+              @if (!isEditingBL) { <div class="whitespace-pre-line">{{selectedShipment.blInfo.notifyParty}}</div> }
+              @if (isEditingBL) { <textarea [(ngModel)]="selectedShipment.blInfo.notifyParty" class="w-full border p-1 text-xs outline-none" rows="2"></textarea> }
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 border-b border-black text-[10px]">
+            <div class="p-1.5 border-r border-black"><b>Vessel / Voyage:</b><br>{{selectedShipment.vesselName}} / {{selectedShipment.voyageNo}}</div>
+            <div class="p-1.5 border-r border-black"><b>Port of Loading (POL):</b><br>{{selectedShipment.pol}}</div>
+            <div class="p-1.5 border-r border-black"><b>Port of Discharge (POD):</b><br>{{selectedShipment.pod}}</div>
+            <div class="p-1.5"><b>Place of Delivery:</b><br>Door Facility Target</div>
+          </div>
+
+          <div class="grid grid-cols-4 border-b border-black text-[10px] font-bold bg-slate-100">
+            <div class="p-1.5 border-r border-black">Container / Seal No.</div>
+            <div class="p-1.5 border-r border-black">Description of Goods</div>
+            <div class="p-1.5 border-r border-black text-right">Gross Weight</div>
+            <div class="p-1.5 text-right">Measurement</div>
+          </div>
+
+          <div class="grid grid-cols-4 border-b-2 border-black text-[10px] min-h-[100px]">
+            <div class="p-1.5 border-r border-black font-mono">
+              {{selectedShipment.containerNo}}<br>SEAL: {{selectedShipment.sealNo}}<br>({{selectedShipment.containerType}})
+            </div>
+            <div class="p-1.5 border-r border-black">
+              @if (!isEditingBL) { <div>{{selectedShipment.blInfo.goodsDescription}}</div> }
+              @if (isEditingBL) { <textarea [(ngModel)]="selectedShipment.blInfo.goodsDescription" class="w-full border p-1 text-xs outline-none" rows="3"></textarea> }
+            </div>
+            <div class="p-1.5 border-r border-black text-right font-mono">{{selectedShipment.vgmWeight}} KGS</div>
+            <div class="p-1.5 text-right font-mono">38.5 CBM</div>
+          </div>
+
+          <div class="p-2 text-[9px] leading-tight space-y-1">
+            <p>RECEIVED by the Freight Forwarder in apparent good order and condition unless otherwise stated herein.</p>
+            <p><b>Freight Amount:</b> FREIGHT PREPAID | <b>Number of Original B/Ls:</b> 3 (THREE)</p>
+            <div class="pt-4 flex justify-between items-end">
+              <div>Place and Date of Issue: HO CHI MINH CITY, VIETNAM</div>
+              <div class="text-center font-bold border-t border-black px-6 pt-1">STAMP & SIGNATURE OF CARRIER</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- 3. MODAL: TẠO / SỬA BOOKING MỚI -->
+  @if (activeModal === 'bookingForm') {
+  <div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-300">
+      <div class="bg-slate-900 text-white px-5 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm">{{bookingFormData.id ? 'HIỆU CHỈNH BOOKING' : 'TẠO MỚI BOOKING CONTAINER FCL'}}</h3>
+        <button (click)="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+      <div class="p-5 space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Tên Khách Hàng / Công Ty</label>
+          <input type="text" [(ngModel)]="bookingFormData.customerName" class="w-full border p-2 rounded outline-none focus:ring-1 focus:ring-blue-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Cảng Đi (POL)</label>
+            <select [(ngModel)]="bookingFormData.pol" class="w-full border p-2 rounded outline-none">
+              <option value="Cát Lái (VN)">Cát Lái (VN)</option>
+              <option value="Hải Phòng (VN)">Hải Phòng (VN)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Cảng Đích (POD)</label>
+            <select [(ngModel)]="bookingFormData.pod" class="w-full border p-2 rounded outline-none">
+              <option value="Singapore (SG)">Singapore (SG)</option>
+              <option value="Shanghai (CN)">Shanghai (CN)</option>
+              <option value="Los Angeles (US)">Los Angeles (US)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Khung Giờ Xe Kéo Lấy Hàng</label>
+            <select [(ngModel)]="bookingFormData.pickupRange" class="w-full border p-2 rounded outline-none">
+              <option value="08:00 - 12:00">08:00 - 12:00 (Sáng)</option>
+              <option value="13:00 - 17:00">13:00 - 17:00 (Chiều)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Loại Container</label>
+            <select [(ngModel)]="bookingFormData.containerType" class="w-full border p-2 rounded outline-none">
+              <option value="20DC">20 Feet Standard (20DC)</option>
+              <option value="40HC">40 Feet High Cube (40HC)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Số Lượng Container</label>
+            <input type="number" min="1" [(ngModel)]="bookingFormData.quantity" class="w-full border p-2 rounded outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Ước Tính Tổng Cước ($)</label>
+            <input type="number" [(ngModel)]="bookingFormData.estimatedTotal" class="w-full border p-2 rounded outline-none">
+          </div>
+        </div>
+        <button (click)="saveBooking()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded shadow transition mt-2">
+          LƯU DỮ LIỆU BOOKING
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- 4. MODAL: LỊCH TÀU & ĐẶT CHỖ (VESSEL SCHEDULE) -->
+  @if (activeModal === 'vesselSchedule') {
+  <div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-300">
+      <div class="bg-slate-900 text-white px-5 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm">LỊCH TÀU & DUNG LƯỢNG CHỖ TRỐNG (VESSEL SCHEDULE)</h3>
+        <button (click)="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+      <div class="p-5 overflow-y-auto max-h-[80vh] text-xs space-y-3">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase">
+              <th class="p-2.5">Tàu / Chuyến</th>
+              <th class="p-2.5">Tuyến Vận Chuyển</th>
+              <th class="p-2.5">Ngày ETD</th>
+              <th class="p-2.5">Slots Còn Trống</th>
+              <th class="p-2.5 text-center">Hành Động</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (vs of vesselSchedules; track vs.voyageNo) {
+            <tr class="hover:bg-slate-50">
+              <td class="p-2.5 font-bold text-blue-900">{{vs.vesselName}} <span class="text-slate-500 font-normal">({{vs.voyageNo}})</span></td>
+              <td class="p-2.5">{{vs.pol}} &rarr; {{vs.pod}}</td>
+              <td class="p-2.5 font-mono">{{vs.etd | date:'dd/MM/yyyy'}}</td>
+              <td class="p-2.5">
+                <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">{{vs.openSlots}} slots available</span>
+              </td>
+              <td class="p-2.5 text-center">
+                <button (click)="bookFromSchedule(vs)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded">
+                  Đặt Booking Ngay
+                </button>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- 5. MODAL: DẠNG BẢNG CÔNG NỢ & THỜI GIAN QUÁ HẠN -->
+  @if (activeModal === 'debtModal') {
+  <div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-300">
+      <div class="bg-slate-900 text-white px-5 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm">BẢNG THEO DÕI CÔNG NỢ & THỜI GIAN QUÁ HẠN</h3>
+        <button (click)="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+      <div class="p-5 overflow-y-auto max-h-[80vh] text-xs">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase">
+              <th class="p-2.5">Mã Shipment</th>
+              <th class="p-2.5">Khách Hàng</th>
+              <th class="p-2.5">Hạn Thanh Toán</th>
+              <th class="p-2.5 text-right">Số Tiền Nợ ($)</th>
+              <th class="p-2.5">Trạng Thái Quá Hạn</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            @for (d of debtList; track d.shipmentCode) {
+            <tr class="hover:bg-slate-50">
+              <td class="p-2.5 font-mono font-bold text-blue-700">{{d.shipmentCode}}</td>
+              <td class="p-2.5 font-medium">{{d.customerName}}</td>
+              <td class="p-2.5 font-mono">{{d.dueDate | date:'dd/MM/yyyy'}}</td>
+              <td class="p-2.5 text-right font-bold text-slate-800">${{d.amount | number:'1.2-2'}}</td>
+              <td class="p-2.5">
+                <span class="status-badge" [ngClass]="d.overdueDays > 0 ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'">
+                  {{d.overdueDays > 0 ? ('Quá hạn ' + d.overdueDays + ' ngày') : 'Trong hạn thanh toán'}}
+                </span>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- 6. MODAL: GỬI TICKET HỖ TRỢ / KHIẾU NẠI GẤP -->
+  @if (activeModal === 'ticketModal') {
+  <div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-300">
+      <div class="bg-red-700 text-white px-5 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm">GỬI YÊU CẦU HỖ TRỢ / KHIẾU NẠI GẤP</h3>
+        <button (click)="closeModal()" class="text-white hover:text-slate-200">&times;</button>
+      </div>
+      <div class="p-5 space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Mã Shipment Liên Quan</label>
+          <input type="text" [(ngModel)]="ticketData.shipmentCode" readonly class="w-full border p-2 rounded bg-slate-100 font-mono outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Chủ Đề Khiếu Nại</label>
+          <select [(ngModel)]="ticketData.subject" class="w-full border p-2 rounded outline-none focus:ring-1 focus:ring-red-500">
+            <option value="Trễ giờ xe kéo lấy container">Trễ giờ xe kéo lấy container</option>
+            <option value="Hư hỏng vỏ container / Rách Seal">Hư hỏng vỏ container / Rách Seal</option>
+            <option value="Sai lệch chứng từ B/L">Sai lệch chứng từ B/L</option>
+            <option value="Thắc mắc về phụ phí VAT">Thắc mắc về phụ phí VAT</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Nội Dung Chi Tiết Sự Cố</label>
+          <textarea [(ngModel)]="ticketData.content" class="w-full border p-2 rounded outline-none focus:ring-1 focus:ring-red-500" rows="4" placeholder="Mô tả sự cố chi tiết để đại lý SEL xử lý ngay..."></textarea>
+        </div>
+        <button (click)="submitTicket()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded shadow transition">
+          GỬI TICKET TỚI ĐẠI LÝ XỬ LÝ
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+</div>

@@ -1,0 +1,280 @@
+<div class="min-h-screen bg-slate-100/70 flex text-slate-800">
+  
+  <!-- Backdrop cho Mobile Sidebar khi mở -->
+  @if (isSidebarOpen()) {
+    <div 
+      (click)="closeSidebar()"
+      class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity">
+    </div>
+  }
+
+  <!-- SIDEBAR (Responsive: Drawer trên Mobile/Tablet, Cố định trên Desktop lg:) -->
+  <aside 
+    [class.translate-x-0]="isSidebarOpen()"
+    [class.-translate-x-full]="!isSidebarOpen()"
+    class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-200 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col border-r border-slate-800 shadow-xl lg:shadow-none">
+    
+    <!-- Sidebar Header / Logo -->
+    <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-base shadow-md shadow-indigo-600/40">
+          IS
+        </div>
+        <div>
+          <span class="font-bold text-base tracking-tight text-white block">iShipTo Hub</span>
+          <span class="text-[10px] text-indigo-400 font-medium tracking-wide uppercase">Control Center</span>
+        </div>
+      </div>
+      <!-- Nút đóng sidebar trên mobile -->
+      <button 
+        (click)="closeSidebar()"
+        class="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg focus:outline-none cursor-pointer">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <button 
+        type="button"
+        (click)="setTab('overview')"
+        [class.bg-indigo-600]="currentTab() === 'overview'"
+        [class.text-white]="currentTab() === 'overview'"
+        [class.text-slate-400]="currentTab() !== 'overview'"
+        [class.hover:bg-slate-800]="currentTab() !== 'overview'"
+        [class.hover:text-slate-200]="currentTab() !== 'overview'"
+        class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        <span>Tổng quan hệ thống</span>
+      </button>
+
+      <!-- Liên kết trực tiếp tới module Tổng quan Booking (OverviewComponent) -->
+      <button 
+        type="button"
+        (click)="goToOverview()"
+        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 flex-shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <span>Tổng quan Booking</span>
+        </div>
+        <span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">Overview</span>
+      </button>
+
+      <!-- Liên kết trực tiếp tới module Quản lý Booking (BookingComponent) -->
+      <button 
+        type="button"
+        (click)="goToBooking()"
+        class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-emerald-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 flex-shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <span>Quản lý Booking (API)</span>
+        </div>
+        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">{{ totalBookingsCount || '50' }}</span>
+      </button>
+
+      <button 
+        type="button"
+        (click)="setTab('shipments')"
+        [class.bg-indigo-600]="currentTab() === 'shipments'"
+        [class.text-white]="currentTab() === 'shipments'"
+        [class.text-slate-400]="currentTab() !== 'shipments'"
+        [class.hover:bg-slate-800]="currentTab() !== 'shipments'"
+        [class.hover:text-slate-200]="currentTab() !== 'shipments'"
+        class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+        </svg>
+        <span>Quản lý vận đơn</span>
+      </button>
+
+      <button 
+        type="button"
+        (click)="setTab('analytics')"
+        [class.bg-indigo-600]="currentTab() === 'analytics'"
+        [class.text-white]="currentTab() === 'analytics'"
+        [class.text-slate-400]="currentTab() !== 'analytics'"
+        [class.hover:bg-slate-800]="currentTab() !== 'analytics'"
+        [class.hover:text-slate-200]="currentTab() !== 'analytics'"
+        class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <span>Báo cáo hiệu suất</span>
+      </button>
+
+      <button 
+        type="button"
+        (click)="setTab('settings')"
+        [class.bg-indigo-600]="currentTab() === 'settings'"
+        [class.text-white]="currentTab() === 'settings'"
+        [class.text-slate-400]="currentTab() !== 'settings'"
+        [class.hover:bg-slate-800]="currentTab() !== 'settings'"
+        [class.hover:text-slate-200]="currentTab() !== 'settings'"
+        class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span>Cài đặt & Tài khoản</span>
+      </button>
+    </nav>
+
+    <!-- Sidebar Footer / Thông tin phiên bản & User Profile mini -->
+    <div class="p-3 border-t border-slate-800">
+      <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-800/60">
+        @if (userPhotoUrl()) {
+          <img [src]="userPhotoUrl()" alt="Avatar" class="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/30" />
+        } @else {
+          <div class="w-9 h-9 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center ring-1 ring-indigo-500/50">
+            {{ userInitial() }}
+          </div>
+        }
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-white truncate">{{ userDisplayName() }}</p>
+          <p class="text-[11px] text-slate-400 truncate">{{ userEmail() }}</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT AREA -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    
+    <!-- TOP HEADER -->
+    <header class="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
+      <div class="flex items-center gap-3">
+        <!-- Nút toggle sidebar trên Mobile / Tablet -->
+        <button
+          type="button"
+          (click)="toggleSidebar()"
+          class="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none cursor-pointer">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            Bảng điều khiển vận hành
+          </h1>
+          <p class="text-xs text-slate-500 hidden sm:block">
+            Theo dõi luồng vận tải thời gian thực và xác thực người dùng
+          </p>
+        </div>
+      </div>
+
+      <!-- User Profile Header & Nút Đăng xuất -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Thông tin User trên Header -->
+        <div class="hidden sm:flex items-center gap-2.5 text-right pl-3 border-l border-slate-200">
+          <div>
+            <span class="block text-xs font-semibold text-slate-800 truncate max-w-[150px]">
+              {{ userEmail() }}
+            </span>
+            <span class="block text-[10px] text-emerald-600 font-medium">
+              ● Đã xác thực Firebase
+            </span>
+          </div>
+          @if (userPhotoUrl()) {
+            <img [src]="userPhotoUrl()" alt="Avatar" class="w-8 h-8 rounded-full object-cover ring-1 ring-slate-300" />
+          } @else {
+            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
+              {{ userInitial() }}
+            </div>
+          }
+        </div>
+
+        <!-- Nút Logout kích hoạt authService.logout() -->
+        <button
+          type="button"
+          (click)="handleLogout()"
+          [disabled]="isLoading()"
+          title="Đăng xuất khỏi hệ thống"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/70 text-rose-700 hover:bg-rose-100 active:bg-rose-200 text-xs font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span class="hidden xs:inline">Đăng xuất</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN BODY CONTENT -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      
+      <!-- User Banner Thông báo chào mừng -->
+      <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 rounded-2xl p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-medium border border-indigo-400/20">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Angular 21 + Firebase Modular Auth v10
+            </div>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white pt-1">
+              Xin chào, {{ userDisplayName() }}!
+            </h2>
+            <p class="text-indigo-200 text-xs sm:text-sm max-w-xl">
+              Hệ thống đã nhận diện phiên đăng nhập của email <span class="font-mono text-white underline">{{ userEmail() }}</span>. Mọi quyền truy cập tuyến đường đã được <span class="text-indigo-100 font-semibold">AuthGuard</span> chứng thực.
+            </p>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <button
+              type="button"
+              (click)="goToOverview()"
+              class="px-3.5 py-2 rounded-xl bg-indigo-600/60 hover:bg-indigo-600 text-xs font-semibold text-white border border-indigo-400/40 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>Tổng quan Vận tải</span>
+            </button>
+            <button
+              type="button"
+              (click)="goToBooking()"
+              class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <span>Quản lý Booking (50 Đơn)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- THỐNG KÊ (Metric Cards) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        @for (item of metrics; track item.title) {
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500 tracking-wide uppercase">{{ item.title }}</span>
+              <span 
+                [class.text-emerald-600]="item.isPositive"
+                [class.bg-emerald-50]="item.isPositive"
+                [class.text-rose-600]="!item.isPositive"
+                [class.bg-rose-50]="!item.isPositive"
+                class="text-[11px] font-bold px-2 py-0.5 rounded-full border"
+                [class.border-emerald-200]="item.isPositive"
+                [class.border-rose-200]="!item.isPositive">
+                {{ item.change }}
+              </span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ item.value }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+
+    </main>
+  </div>
+</div>
