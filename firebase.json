@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist/portal-ishipto/browser",
+    "public": "dist/fcl-customer-portal/browser",
     "ignore": [
       "firebase.json",
       "**/.*",
