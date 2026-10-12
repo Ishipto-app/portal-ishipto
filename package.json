@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "node build.js",
+    "build:angular": "ng build --configuration=production",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@angular/build": "^22.2.2",
+    "@angular/cli": "^22.2.2",
     "@angular/compiler": "^22.2.2",
     "@angular/compiler-cli": "^22.2.2",
     "@tailwindcss/postcss": "^4.3.3",
