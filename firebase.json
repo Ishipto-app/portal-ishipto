@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist/fcl-customer-portal/browser",
+    "public": "dist/fcl-customer-portal",
     "ignore": [
       "firebase.json",
       "**/.*",
