@@ -1,0 +1,6 @@
+{
+  "name": "FCL Door-to-Door Logistics Portal",
+  "description": "Cổng Dịch Vụ Khách Hàng Vận Tải Container Nguyên Chuyến (FCL Door-to-Door) chuyên tuyến Hải Phòng ↔ TP. Hồ Chí Minh",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
