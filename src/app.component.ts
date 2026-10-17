@@ -90,7 +90,7 @@ export interface ToastMessage {
 }
 
 @Component({
-  selector: 'app-fcl-door-to-door',
+  selector: 'app-root',
   standalone: true,
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -1459,7 +1459,7 @@ export interface ToastMessage {
     </div>
   `
 })
-export class FclDoorToDoorComponent {
+export class AppComponent {
   // Authentication State: MẶC ĐỊNH LÀ FALSE ĐỂ NGƯỜI DÙNG PHẢI ĐĂNG NHẬP
   isLoggedIn = signal<boolean>(false);
   authTab = signal<'LOGIN' | 'REGISTER' | 'FORGOT'>('LOGIN');

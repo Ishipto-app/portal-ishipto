@@ -1,6 +1,8 @@
 {
-  "name": "FCL Door-to-Door Logistics Portal",
-  "description": "Cổng Dịch Vụ Khách Hàng Vận Tải Container Nguyên Chuyến (FCL Door-to-Door) chuyên tuyến Hải Phòng ↔ TP. Hồ Chí Minh",
+  "name": "Angular Enterprise Analytics Dashboard",
+  "description": "A responsive, modern analytics and operational dashboard built with Angular and Tailwind CSS.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

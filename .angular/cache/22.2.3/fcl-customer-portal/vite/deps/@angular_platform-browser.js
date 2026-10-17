@@ -1,5 +1,6 @@
-import { $i as unwrapSafeValue, $l as __awaiter, Ac as InjectionToken, Ar as _sanitizeUrl, Br as bypassSanitizationTrustUrl, Bt as computed, Cc as ErrorHandler, Cr as TracingService, Dr as ViewEncapsulation, Ei as performanceMarkFeature, El as signal, F as createPlatformFactory, Fl as ɵɵinject, Fn as Injectable, Gl as operate, Hc as PLATFORM_INITIALIZER, Hl as map, Ir as bypassSanitizationTrustHtml, Jc as SecurityContext, Jl as reportUnhandledError, Ki as setDocument, Kl as Observable, Lr as bypassSanitizationTrustResourceUrl, Lt as ResourceImpl, Ml as ɵɵdefineInjector, Nr as allLeavingAnimations, Oc as INJECTOR_SCOPE, Pn as Inject, Pr as allowSanitizationBypassAndThrow, Pt as CACHE_ACTIVE, Ql as __await, Qn as Optional, Rr as bypassSanitizationTrustScript, Sc as EnvironmentInjector, Tr as USE_PENDING_TASKS, Vc as PLATFORM_ID, Vt as encapsulateResourceError, Wc as PendingTasks, Wi as setClassMetadata, Wl as createOperatorSubscriber, Wt as linkedSignal, Xl as __asyncGenerator, Xr as describeDomNode, Yc as TransferState, Yl as isFunction, Yt as APP_BOOTSTRAP_LISTENER, Z as internalCreateApplication, Zc as Version, Zl as __asyncValues, ao as ɵɵdefineNgModule, ar as RendererFactory2, au as _objectSpread2, bc as ENVIRONMENT_INITIALIZER, br as TestabilityRegistry, bt as withI18nSupport$1, dr as Service, el as _global, eu as __generator, fc as _asyncToGenerator, fl as inject, fn as Console, gc as CSP_NONCE, hr as TESTABILITY_GETTER, jc as Injector, jl as ɵɵdefineInjectable, jn as IS_ENABLED_BLOCKING_INITIAL_NAVIGATION, kl as truncateMiddle, kr as _sanitizeHtml, mc as APP_ID, mr as TESTABILITY, ol as formatRuntimeError, or as RendererStyleFlags2, ot as platformCore, ou as _defineProperty, qc as RuntimeError, ql as observable, qn as NgModule, qt as untracked, sl as forwardRef, so as ɵɵdefineService, sr as SHARED_STYLES_HOST, t as ApplicationModule, tl as assertInInjectionContext, tn as ApplicationRef, tu as __values, ut as provideStabilityDebugging, vc as DOCUMENT, vl as makeEnvironmentProviders, vt as withDomHydration, wl as runInInjectionContext, xt as withIncrementalHydration$1, yc as DestroyRef, yl as makeStateKey, yr as Testability, yt as withEventReplay$1, zc as NgZone, zr as bypassSanitizationTrustStyle } from "./core-DWG4mgg4.js";
-import { Bt as DomAdapter, C as CommonModule, Ht as PlatformLocation, Ut as getDOM, Wt as setRootDomAdapter, a as PLATFORM_BROWSER_ID, v as XhrFactory, y as parseCookieValue } from "./common-M6rpY8xC.js";
+import { n as _defineProperty, t as _objectSpread2 } from "./objectSpread2-weooBxVk.js";
+import { $i as unwrapSafeValue, $l as __awaiter, Ac as InjectionToken, Ar as _sanitizeUrl, Br as bypassSanitizationTrustUrl, Bt as computed, Cc as ErrorHandler, Cr as TracingService, Dr as ViewEncapsulation, Ei as performanceMarkFeature, El as signal, F as createPlatformFactory, Fl as ɵɵinject, Fn as Injectable, Gl as operate, Hc as PLATFORM_INITIALIZER, Hl as map, Ir as bypassSanitizationTrustHtml, Jc as SecurityContext, Jl as reportUnhandledError, Ki as setDocument, Kl as Observable, Lr as bypassSanitizationTrustResourceUrl, Lt as ResourceImpl, Ml as ɵɵdefineInjector, Nr as allLeavingAnimations, Oc as INJECTOR_SCOPE, Pn as Inject, Pr as allowSanitizationBypassAndThrow, Pt as CACHE_ACTIVE, Ql as __await, Qn as Optional, Rr as bypassSanitizationTrustScript, Sc as EnvironmentInjector, Tr as USE_PENDING_TASKS, Vc as PLATFORM_ID, Vt as encapsulateResourceError, Wc as PendingTasks, Wi as setClassMetadata, Wl as createOperatorSubscriber, Wt as linkedSignal, Xl as __asyncGenerator, Xr as describeDomNode, Yc as TransferState, Yl as isFunction, Yt as APP_BOOTSTRAP_LISTENER, Z as internalCreateApplication, Zc as Version, Zl as __asyncValues, ao as ɵɵdefineNgModule, ar as RendererFactory2, bc as ENVIRONMENT_INITIALIZER, br as TestabilityRegistry, bt as withI18nSupport$1, dr as Service, el as _global, eu as __generator, fc as _asyncToGenerator, fl as inject, fn as Console, gc as CSP_NONCE, hr as TESTABILITY_GETTER, jc as Injector, jl as ɵɵdefineInjectable, jn as IS_ENABLED_BLOCKING_INITIAL_NAVIGATION, kl as truncateMiddle, kr as _sanitizeHtml, mc as APP_ID, mr as TESTABILITY, ol as formatRuntimeError, or as RendererStyleFlags2, ot as platformCore, qc as RuntimeError, ql as observable, qn as NgModule, qt as untracked, sl as forwardRef, so as ɵɵdefineService, sr as SHARED_STYLES_HOST, t as ApplicationModule, tl as assertInInjectionContext, tn as ApplicationRef, tu as __values, ut as provideStabilityDebugging, vc as DOCUMENT, vl as makeEnvironmentProviders, vt as withDomHydration, wl as runInInjectionContext, xt as withIncrementalHydration$1, yc as DestroyRef, yl as makeStateKey, yr as Testability, yt as withEventReplay$1, zc as NgZone, zr as bypassSanitizationTrustStyle } from "./core-BJvYJGZF.js";
+import { Bt as DomAdapter, C as CommonModule, Ht as PlatformLocation, Ut as getDOM, Wt as setRootDomAdapter, a as PLATFORM_BROWSER_ID, v as XhrFactory, y as parseCookieValue } from "./common-CQzvn39E.js";
 //#region node_modules/rxjs/dist/esm5/internal/util/isScheduler.js
 function isScheduler(value) {
 	return value && isFunction(value.schedule);
@@ -469,7 +470,7 @@ function switchMap(project, resultSelector) {
 //#endregion
 //#region node_modules/@angular/platform-browser/fesm2022/_dom_renderer-chunk.mjs
 /**
-* @license Angular v22.2.2
+* @license Angular v22.2.3
 * (c) 2010-2026 Google LLC. https://angular.dev/
 * License: MIT
 */
@@ -1089,7 +1090,7 @@ var EmulatedEncapsulationDomRenderer2 = class extends NoneEncapsulationDomRender
 //#endregion
 //#region node_modules/@angular/platform-browser/fesm2022/_browser-chunk.mjs
 /**
-* @license Angular v22.2.2
+* @license Angular v22.2.3
 * (c) 2010-2026 Google LLC. https://angular.dev/
 * License: MIT
 */
@@ -1460,7 +1461,7 @@ _defineProperty(BrowserModule, "ɵinj", /*@__PURE__*/ ɵɵdefineInjector({
 //#endregion
 //#region node_modules/@angular/common/fesm2022/_module-chunk.mjs
 /**
-* @license Angular v22.2.2
+* @license Angular v22.2.3
 * (c) 2010-2026 Google LLC. https://angular.dev/
 * License: MIT
 */
@@ -1672,22 +1673,9 @@ function paramParser(rawParams, codec) {
 	});
 	return map;
 }
-var STANDARD_ENCODING_REGEX = /%(\d[a-f0-9])/gi;
-var STANDARD_ENCODING_REPLACEMENTS = {
-	"40": "@",
-	"3A": ":",
-	"24": "$",
-	"2C": ",",
-	"3B": ";",
-	"3D": "=",
-	"3F": "?",
-	"2F": "/"
-};
+var STANDARD_ENCODING_REGEX = /[&+#]/g;
 function standardEncoding(v) {
-	return encodeURIComponent(v).replace(STANDARD_ENCODING_REGEX, (s, t) => {
-		var _STANDARD_ENCODING_RE;
-		return (_STANDARD_ENCODING_RE = STANDARD_ENCODING_REPLACEMENTS[t]) !== null && _STANDARD_ENCODING_RE !== void 0 ? _STANDARD_ENCODING_RE : s;
-	});
+	return encodeURI(v).replace(STANDARD_ENCODING_REGEX, encodeURIComponent);
 }
 function valueToString(value) {
 	return `${value}`;
@@ -3221,7 +3209,7 @@ _defineProperty(HttpClientJsonpModule, "ɵinj", /*@__PURE__*/ ɵɵdefineInjector
 //#endregion
 //#region node_modules/@angular/common/fesm2022/http.mjs
 /**
-* @license Angular v22.2.2
+* @license Angular v22.2.3
 * (c) 2010-2026 Google LLC. https://angular.dev/
 * License: MIT
 */
@@ -3661,7 +3649,7 @@ var _CssVarNamespacer;
 var _DomSanitizer;
 var _DomSanitizerImpl;
 /**
-* @license Angular v22.2.2
+* @license Angular v22.2.3
 * (c) 2010-2026 Google LLC. https://angular.dev/
 * License: MIT
 */
@@ -4039,6 +4027,6 @@ _defineProperty(DomSanitizerImpl, "ɵprov", /*@__PURE__*/ ɵɵdefineService({
 (() => {
 	(typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(DomSanitizerImpl, [{ type: Service }], null, null);
 })();
-var VERSION = /* @__PURE__ */ new Version("22.2.2");
+var VERSION = /* @__PURE__ */ new Version("22.2.3");
 //#endregion
 export { BrowserModule, By, CssVarNamespacer, DomSanitizer, EVENT_MANAGER_PLUGINS, EventManager, EventManagerPlugin, HydrationFeatureKind, Meta, REMOVE_STYLES_ON_COMPONENT_DESTROY, Title, VERSION, bootstrapApplication, createApplication, disableDebugTools, enableDebugTools, platformBrowser, provideClientHydration, provideCssVarNamespacing, provideProtractorTestingSupport, withEventReplay, withHttpTransferCacheOptions, withI18nSupport, withIncrementalHydration, withNoHttpTransferCache, withNoIncrementalHydration, BrowserDomAdapter as ɵBrowserDomAdapter, BrowserGetTestability as ɵBrowserGetTestability, DomEventsPlugin as ɵDomEventsPlugin, DomRendererFactory2 as ɵDomRendererFactory2, DomSanitizerImpl as ɵDomSanitizerImpl, KeyEventsPlugin as ɵKeyEventsPlugin, SharedStylesHost as ɵSharedStylesHost, disableThrowOnSyntheticProps as ɵdisableThrowOnSyntheticProps, getDOM as ɵgetDOM };
