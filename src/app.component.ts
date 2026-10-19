@@ -1,5 +1,32 @@
-import { Component, ChangeDetectionStrategy, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, computed, OnInit, Signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable } from 'rxjs';
+
+export interface VoyageFormValue {
+  id: string | number;
+  supplier_id: number | string | null;
+  supplier_name: string;
+  vessel_id: number | string | null;
+  vessel_name: string;
+  voyage_name: string;
+  load_port_id: number | string | null;
+  load_port_name: string;
+  load_terminal_id: number | string | null;
+  load_terminal_name: string;
+  discharge_port_id: number | string | null;
+  discharge_port_name: string;
+  discharge_terminal_id: number | string | null;
+  discharge_terminal_name: string;
+  depart_date: string;
+  depart_time: string;
+  closing_date: string;
+  closing_time: string;
+  arrive_date: string;
+  arrive_time: string;
+  update_by: string
+}
 
 /**
  * =======================================================================
@@ -67,8 +94,7 @@ export interface ApiVoyageItem {
   discharge_terminal?: number | string | null;
   discharge_terminal_name: string;
   arrive_time: string;
-  update_by_id: number | string;
-  update_by_name: string;
+  update_by: string;
   status?: 'OPEN' | 'CLOSING_SOON' | 'CLOSED';
 }
 
@@ -154,7 +180,7 @@ export interface ToastMessage {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
@@ -354,16 +380,7 @@ export interface ToastMessage {
                       >
                         <span>🔑</span> Đăng Nhập Khách Hàng Doanh Nghiệp
                       </button>
-                      <button 
-                        type="button"
-                        (click)="enterDemoMode()"
-                        class="w-full bg-slate-900 hover:bg-slate-700/80 border border-slate-700 text-cyan-300 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-2 transition"
-                      >
-                        <span>🚢</span> Vào Thẳng Bước 1 (Xem Bảng & Modal Quản Lý Lịch Tàu)
-                      </button>
-                    </div>
-                    <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-                      💡 Nhập tài khoản và mật khẩu đã được cấp để truy cập hệ thống hoặc bấm nút trên để vào thẳng Bước 1 Lịch tàu.
+                      
                     </div>
                   }
 
@@ -672,14 +689,26 @@ export interface ToastMessage {
                           <span class="uppercase tracking-wider text-[11px]">Bộ Lọc Nhanh (POL, POD & Khoảng Thời Gian)</span>
                         </div>
                         @if (hasActiveVoyageFilters()) {
-                          <button 
-                            type="button"
-                            (click)="resetVoyageFilters()"
-                            class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 transition px-2 py-0.5 rounded bg-rose-950/40 border border-rose-800/60"
-                          >
-                            <span>✕</span>
-                            <span>Đặt lại tất cả lọc</span>
-                          </button>
+                          <div class="flex items-center gap-2">
+                            <button 
+                              type="button"
+                              (click)="resetVoyageFiltersToDefault()"
+                              class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition px-2.5 py-1 rounded-lg bg-cyan-950/60 border border-cyan-800/80 active:scale-95"
+                              title="Khôi phục bộ lọc mặc định: POL HAIPHONG (#3) ➔ POD HOCHIMINH (#4)"
+                            >
+                              <span>⚓</span>
+                              <span>Mặc định (HP ➔ HCM)</span>
+                            </button>
+                            <button 
+                              type="button"
+                              (click)="clearAllVoyageFilters()"
+                              class="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 transition px-2.5 py-1 rounded-lg bg-rose-950/40 border border-rose-800/60 active:scale-95"
+                              title="Xóa tất cả các tiêu chí lọc để xem toàn bộ danh mục tàu"
+                            >
+                              <span>✕</span>
+                              <span>Xóa tất cả lọc</span>
+                            </button>
+                          </div>
                         }
                       </div>
 
@@ -956,10 +985,7 @@ export interface ToastMessage {
                                   </td>
                                   <!-- Người cập nhật -->
                                   <td class="py-3 px-3.5">
-                                    <div class="font-medium text-slate-200">{{ v.update_by_name || 'Albert Long' }}</div>
-                                    @if (v.update_by_id) {
-                                      <span class="text-[9px] text-slate-500 font-mono">ID: {{ v.update_by_id }}</span>
-                                    }
+                                    <div class="font-medium text-slate-200">{{ v.update_by }}</div>
                                   </td>
                                   <!-- Thao tác: Đặt chỗ, Sửa, Copy, Xóa -->
                                   <td class="py-3 px-3.5 text-center">
@@ -1125,7 +1151,7 @@ export interface ToastMessage {
 
                               <!-- Thông tin người tạo -->
                               <div class="flex items-center justify-between text-xs text-slate-400 pt-0.5">
-                                <span class="text-[11px]">Người cập nhật: <strong class="text-slate-200">{{ v.update_by_name || 'Albert Long' }}</strong></span>
+                                <span class="text-[11px]">Người cập nhật: <strong class="text-slate-200">{{ v.update_by || 'Albert Long' }}</strong></span>
                               </div>
 
                               <!-- 4 Nút Hành Động Cho Mobile (To, dễ bấm chạm) -->
@@ -2186,8 +2212,21 @@ export interface ToastMessage {
             </div>
 
             <!-- Form Content Grid -->
-            <div class="space-y-4 text-xs max-h-[68vh] overflow-y-auto pr-1">
+            <div class="space-y-4 text-xs max-h-[68vh] overflow-y-auto pr-1" [formGroup]="voyageForm">
               
+              <!-- Cảnh báo Validators (voyageForm) nếu form chưa hợp lệ khi lưu -->
+              @if (voyageFormSubmitted() && (voyageForm.invalid || isDateSequenceInvalid())) {
+                <div class="p-3 bg-rose-950/80 border border-rose-500/80 rounded-2xl text-rose-200 text-xs flex items-start gap-2.5 shadow-lg animate-fade-in">
+                  <span class="text-base mt-0.5">⚠️</span>
+                  <div class="space-y-0.5">
+                    <div class="font-bold text-rose-300">Cảnh báo Validators trong voyageForm</div>
+                    <div class="text-[11px] text-rose-200/90 leading-tight">
+                      Một số trường bắt buộc chưa được điền hoặc không hợp lệ theo chuẩn Validators (được đánh dấu viền đỏ). Vui lòng hoàn tất trước khi lưu.
+                    </div>
+                  </div>
+                </div>
+              }
+
               <!-- Cảnh báo trùng lặp chuyến tàu nếu đã tồn tại -->
               @if (isFormDuplicate()) {
                 <div class="p-3 bg-amber-950/80 border border-amber-500/80 rounded-2xl text-amber-200 text-xs flex items-start gap-2.5 shadow-lg">
@@ -2210,20 +2249,23 @@ export interface ToastMessage {
                 <div class="relative">
                   <div class="flex items-center justify-between mb-1">
                     <label class="font-bold text-slate-300 uppercase text-[11px]">Hãng Tàu (Supplier) *</label>
-                    @if (formSupplierId()) {
+                    @if (formValues().supplier_id) {
                       <span class="text-[10px] font-mono text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800 font-bold">
-                        ID: {{ formSupplierId() }}
+                        ID: {{ formValues().supplier_id }}
                       </span>
                     }
                   </div>
                   <div class="relative">
                     <input 
                       type="text" 
-                      [value]="formSupplierName()"
-                      (input)="formSupplierName.set($any($event.target).value)"
+                      formControlName="supplier_name"
                       (focus)="activeAutocomplete.set('supplier')"
                       placeholder="Gõ tìm hãng tàu (VD: Hải An, VOSCO...)"
-                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                      class="w-full bg-slate-950 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                      [class.border-rose-500]="isControlInvalid('supplier_name') || isControlInvalid('supplier_id')"
+                      [class.bg-rose-950/20]="isControlInvalid('supplier_name') || isControlInvalid('supplier_id')"
+                      [class.border-slate-700]="!isControlInvalid('supplier_name') && !isControlInvalid('supplier_id')"
+                      [class.focus:border-cyan-500]="!isControlInvalid('supplier_name') && !isControlInvalid('supplier_id')"
                     />
                     <button 
                       type="button" 
@@ -2233,11 +2275,17 @@ export interface ToastMessage {
                       ▼
                     </button>
                   </div>
+                  @if (isControlInvalid('supplier_name') || isControlInvalid('supplier_id')) {
+                    <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Vui lòng chọn Hãng tàu từ danh mục gợi ý (Validators.required)</span>
+                    </div>
+                  }
                   @if (activeAutocomplete() === 'supplier') {
                     <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800">
                       @for (s of filteredSuppliers(); track s.id) {
                         <button 
-                          type="button"
+                          type="button" 
                           (click)="selectSupplierItem(s)"
                           class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200 hover:text-cyan-300"
                         >
@@ -2258,20 +2306,23 @@ export interface ToastMessage {
                 <div class="relative">
                   <div class="flex items-center justify-between mb-1">
                     <label class="font-bold text-slate-300 uppercase text-[11px]">Tên Tàu (Vessel) *</label>
-                    @if (formVesselId()) {
+                    @if (formValues().vessel_id) {
                       <span class="text-[10px] font-mono text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800 font-bold">
-                        ID: {{ formVesselId() }}
+                        ID: {{ formValues().vessel_id }}
                       </span>
                     }
                   </div>
                   <div class="relative">
                     <input 
                       type="text" 
-                      [value]="formVesselName()"
-                      (input)="formVesselName.set($any($event.target).value)"
+                      formControlName="vessel_name"
                       (focus)="activeAutocomplete.set('vessel')"
                       placeholder="Gõ tìm tàu (VD: HAIAN PARK...)"
-                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                      class="w-full bg-slate-950 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                      [class.border-rose-500]="isControlInvalid('vessel_name') || isControlInvalid('vessel_id')"
+                      [class.bg-rose-950/20]="isControlInvalid('vessel_name') || isControlInvalid('vessel_id')"
+                      [class.border-slate-700]="!isControlInvalid('vessel_name') && !isControlInvalid('vessel_id')"
+                      [class.focus:border-cyan-500]="!isControlInvalid('vessel_name') && !isControlInvalid('vessel_id')"
                     />
                     <button 
                       type="button" 
@@ -2281,11 +2332,17 @@ export interface ToastMessage {
                       ▼
                     </button>
                   </div>
+                  @if (isControlInvalid('vessel_name') || isControlInvalid('vessel_id')) {
+                    <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Vui lòng chọn Tên tàu từ danh mục gợi ý (Validators.required)</span>
+                    </div>
+                  }
                   @if (activeAutocomplete() === 'vessel') {
                     <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800">
                       @for (v of filteredVessels(); track v.id) {
                         <button 
-                          type="button"
+                          type="button" 
                           (click)="selectVesselItem(v)"
                           class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200 hover:text-cyan-300"
                         >
@@ -2309,35 +2366,39 @@ export interface ToastMessage {
                 <div class="relative">
                   <div class="flex items-center justify-between mb-1">
                     <label class="font-bold text-slate-300 uppercase text-[11px]">Số Chuyến (Voyage Name) *</label>
-                    @if (formVoyageName()) {
+                    @if (formValues().voyage_name) {
                       <span class="text-[10px] font-mono text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800 font-bold">
-                        {{ formVoyageName() }}
+                        {{ formValues().voyage_name }}
                       </span>
                     }
                   </div>
                   <div class="relative">
                     <input 
                       type="text" 
-                      [value]="formVoyageName()"
-                      (input)="formVoyageName.set($any($event.target).value)"
-                      (focus)="activeAutocomplete.set('voyageName')"
+                      formControlName="voyage_name"
                       placeholder="Gõ số chuyến (VD: V.2608S, V.1202S...)"
-                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-cyan-500 pr-7"
+                      class="w-full bg-slate-950 border rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none pr-7 transition"
+                      [class.border-rose-500]="isControlInvalid('voyage_name')"
+                      [class.bg-rose-950/20]="isControlInvalid('voyage_name')"
+                      [class.border-slate-700]="!isControlInvalid('voyage_name')"
+                      [class.focus:border-cyan-500]="!isControlInvalid('voyage_name')"
                     />
-                    <button 
-                      type="button" 
-                      (click)="toggleAutocomplete('voyageName')"
-                      class="absolute right-2 top-2 text-slate-400 hover:text-white text-xs"
-                      title="Xem danh sách gợi ý số chuyến"
-                    >
-                      ▼
-                    </button>
                   </div>
+                  @if (isControlInvalid('voyage_name')) {
+                    <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      @if (voyageForm.get('voyage_name')?.hasError('minlength')) {
+                        <span>Số chuyến phải có ít nhất 2 ký tự (Validators.minLength(2))</span>
+                      } @else {
+                        <span>Vui lòng nhập Số chuyến tàu (Validators.required)</span>
+                      }
+                    </div>
+                  }
                   @if (activeAutocomplete() === 'voyageName') {
                     <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800">
                       @for (name of filteredVoyageSuggestions(); track name) {
                         <button 
-                          type="button"
+                          type="button" 
                           (click)="selectVoyageNameItem(name)"
                           class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200 hover:text-cyan-300"
                         >
@@ -2355,18 +2416,18 @@ export interface ToastMessage {
                 <div class="relative">
                   <div class="flex items-center justify-between mb-1">
                     <label class="font-bold text-slate-300 uppercase text-[11px]">Người Cập Nhật *</label>
-                    <span class="text-[10px] font-mono text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800 font-bold">
-                      ID: {{ formUpdateById() }}
-                    </span>
                   </div>
                   <div class="relative">
                     <input 
                       type="text" 
-                      [value]="formUpdateByName()"
-                      (input)="formUpdateByName.set($any($event.target).value)"
+                      formControlName="update_by"
                       (focus)="activeAutocomplete.set('updateBy')"
                       placeholder="Chọn người cập nhật"
-                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                      class="w-full bg-slate-950 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                      [class.border-rose-500]="isControlInvalid('update_by')"
+                      [class.bg-rose-950/20]="isControlInvalid('update_by')"
+                      [class.border-slate-700]="!isControlInvalid('update_by')"
+                      [class.focus:border-cyan-500]="!isControlInvalid('update_by')"
                     />
                     <button 
                       type="button" 
@@ -2376,6 +2437,12 @@ export interface ToastMessage {
                       ▼
                     </button>
                   </div>
+                  @if (isControlInvalid('update_by')) {
+                    <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Vui lòng chọn hoặc nhập Người cập nhật (Validators.required)</span>
+                    </div>
+                  }
                   @if (activeAutocomplete() === 'updateBy') {
                     <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800">
                       @for (u of filteredUsers(); track u.id) {
@@ -2403,18 +2470,21 @@ export interface ToastMessage {
                   <div class="relative">
                     <div class="flex items-center justify-between mb-1">
                       <label class="font-semibold text-slate-300 text-[11px]">Cảng Xếp *</label>
-                      @if (formLoadPortId()) {
-                        <span class="text-[10px] font-mono text-cyan-400 font-bold">ID: {{ formLoadPortId() }}</span>
+                      @if (formValues().load_port_id) {
+                        <span class="text-[10px] font-mono text-cyan-400 font-bold">ID: {{ formValues().load_port_id }}</span>
                       }
                     </div>
                     <div class="relative">
                       <input 
                         type="text" 
-                        [value]="formLoadPortName()"
-                        (input)="formLoadPortName.set($any($event.target).value)"
+                        formControlName="load_port_name"
                         (focus)="activeAutocomplete.set('loadPort')"
                         placeholder="Chọn cảng xếp (Hải Phòng...)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                        [class.border-rose-500]="isControlInvalid('load_port_name') || isControlInvalid('load_port_id')"
+                        [class.bg-rose-950/20]="isControlInvalid('load_port_name') || isControlInvalid('load_port_id')"
+                        [class.border-slate-700]="!isControlInvalid('load_port_name') && !isControlInvalid('load_port_id')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('load_port_name') && !isControlInvalid('load_port_id')"
                       />
                       <button 
                         type="button" 
@@ -2424,11 +2494,17 @@ export interface ToastMessage {
                         ▼
                       </button>
                     </div>
+                    @if (isControlInvalid('load_port_name') || isControlInvalid('load_port_id')) {
+                      <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                        <span>⚠️</span>
+                        <span>Vui lòng chọn Cảng xếp hàng POL (Validators.required)</span>
+                      </div>
+                    }
                     @if (activeAutocomplete() === 'loadPort') {
                       <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-44 overflow-y-auto z-50 divide-y divide-slate-800">
                         @for (p of filteredLoadPorts(); track p.id) {
                           <button 
-                            type="button"
+                            type="button" 
                             (click)="selectLoadPortItem(p)"
                             class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200 hover:text-cyan-300"
                           >
@@ -2444,18 +2520,21 @@ export interface ToastMessage {
                   <div class="relative">
                     <div class="flex items-center justify-between mb-1">
                       <label class="font-semibold text-slate-300 text-[11px]">Bến Cảng Xếp (Terminal) *</label>
-                      @if (formLoadTerminalId()) {
-                        <span class="text-[10px] font-mono text-cyan-400 font-bold">ID: {{ formLoadTerminalId() }}</span>
+                      @if (formValues().load_terminal_id) {
+                        <span class="text-[10px] font-mono text-cyan-400 font-bold">ID: {{ formValues().load_terminal_id }}</span>
                       }
                     </div>
                     <div class="relative">
                       <input 
                         type="text" 
-                        [value]="formLoadTerminalName()"
-                        (input)="formLoadTerminalName.set($any($event.target).value)"
+                        formControlName="load_terminal_name"
                         (focus)="activeAutocomplete.set('loadTerminal')"
                         placeholder="Chọn bến cảng xếp (Đình Vũ, Tân Vũ...)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                        [class.border-rose-500]="isControlInvalid('load_terminal_name') || isControlInvalid('load_terminal_id')"
+                        [class.bg-rose-950/20]="isControlInvalid('load_terminal_name') || isControlInvalid('load_terminal_id')"
+                        [class.border-slate-700]="!isControlInvalid('load_terminal_name') && !isControlInvalid('load_terminal_id')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('load_terminal_name') && !isControlInvalid('load_terminal_id')"
                       />
                       <button 
                         type="button" 
@@ -2465,11 +2544,17 @@ export interface ToastMessage {
                         ▼
                       </button>
                     </div>
+                    @if (isControlInvalid('load_terminal_name') || isControlInvalid('load_terminal_id')) {
+                      <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                        <span>⚠️</span>
+                        <span>Vui lòng chọn Bến cảng xếp (Validators.required)</span>
+                      </div>
+                    }
                     @if (activeAutocomplete() === 'loadTerminal') {
                       <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-44 overflow-y-auto z-50 divide-y divide-slate-800">
                         @for (t of filteredLoadTerminals(); track t.id) {
                           <button 
-                            type="button"
+                            type="button" 
                             (click)="selectLoadTerminalItem(t)"
                             class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200 hover:text-cyan-300"
                           >
@@ -2495,18 +2580,21 @@ export interface ToastMessage {
                   <div class="relative">
                     <div class="flex items-center justify-between mb-1">
                       <label class="font-semibold text-slate-300 text-[11px]">Cảng Dỡ *</label>
-                      @if (formDischargePortId()) {
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold">ID: {{ formDischargePortId() }}</span>
+                      @if (formValues().discharge_port_id) {
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold">ID: {{ formValues().discharge_port_id }}</span>
                       }
                     </div>
                     <div class="relative">
                       <input 
                         type="text" 
-                        [value]="formDischargePortName()"
-                        (input)="formDischargePortName.set($any($event.target).value)"
+                        formControlName="discharge_port_name"
                         (focus)="activeAutocomplete.set('dischargePort')"
                         placeholder="Chọn cảng dỡ (TP.HCM...)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                        [class.border-rose-500]="isControlInvalid('discharge_port_name') || isControlInvalid('discharge_port_id')"
+                        [class.bg-rose-950/20]="isControlInvalid('discharge_port_name') || isControlInvalid('discharge_port_id')"
+                        [class.border-slate-700]="!isControlInvalid('discharge_port_name') && !isControlInvalid('discharge_port_id')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('discharge_port_name') && !isControlInvalid('discharge_port_id')"
                       />
                       <button 
                         type="button" 
@@ -2516,11 +2604,17 @@ export interface ToastMessage {
                         ▼
                       </button>
                     </div>
+                    @if (isControlInvalid('discharge_port_name') || isControlInvalid('discharge_port_id')) {
+                      <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                        <span>⚠️</span>
+                        <span>Vui lòng chọn Cảng dỡ hàng POD (Validators.required)</span>
+                      </div>
+                    }
                     @if (activeAutocomplete() === 'dischargePort') {
                       <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-44 overflow-y-auto z-50 divide-y divide-slate-800">
                         @for (p of filteredDischargePorts(); track p.id) {
                           <button 
-                            type="button"
+                            type="button" 
                             (click)="selectDischargePortItem(p)"
                             class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200 hover:text-cyan-300"
                           >
@@ -2536,18 +2630,21 @@ export interface ToastMessage {
                   <div class="relative">
                     <div class="flex items-center justify-between mb-1">
                       <label class="font-semibold text-slate-300 text-[11px]">Bến Cảng Dỡ (Terminal) *</label>
-                      @if (formDischargeTerminalId()) {
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold">ID: {{ formDischargeTerminalId() }}</span>
+                      @if (formValues().discharge_terminal_id) {
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold">ID: {{ formValues().discharge_terminal_id }}</span>
                       }
                     </div>
                     <div class="relative">
                       <input 
                         type="text" 
-                        [value]="formDischargeTerminalName()"
-                        (input)="formDischargeTerminalName.set($any($event.target).value)"
+                        formControlName="discharge_terminal_name"
                         (focus)="activeAutocomplete.set('dischargeTerminal')"
                         placeholder="Chọn bến cảng dỡ (Cát Lái, VICT...)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 pr-7"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none pr-7 transition"
+                        [class.border-rose-500]="isControlInvalid('discharge_terminal_name') || isControlInvalid('discharge_terminal_id')"
+                        [class.bg-rose-950/20]="isControlInvalid('discharge_terminal_name') || isControlInvalid('discharge_terminal_id')"
+                        [class.border-slate-700]="!isControlInvalid('discharge_terminal_name') && !isControlInvalid('discharge_terminal_id')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('discharge_terminal_name') && !isControlInvalid('discharge_terminal_id')"
                       />
                       <button 
                         type="button" 
@@ -2557,6 +2654,12 @@ export interface ToastMessage {
                         ▼
                       </button>
                     </div>
+                    @if (isControlInvalid('discharge_terminal_name') || isControlInvalid('discharge_terminal_id')) {
+                      <div class="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-medium animate-fade-in">
+                        <span>⚠️</span>
+                        <span>Vui lòng chọn Bến cảng dỡ (Validators.required)</span>
+                      </div>
+                    }
                     @if (activeAutocomplete() === 'dischargeTerminal') {
                       <div class="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl max-h-44 overflow-y-auto z-50 divide-y divide-slate-800">
                         @for (t of filteredDischargeTerminals(); track t.id) {
@@ -2580,127 +2683,196 @@ export interface ToastMessage {
               <!-- Hàng 5, 6, 7: Các mốc thời gian có Date Picker & Time Picker -->
               <div class="space-y-3 pt-1">
                 <!-- 1. Depart Time (Khởi hành) -->
-                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                <div class="bg-slate-950 p-3 rounded-2xl border"
+                  [class.border-rose-500]="isControlInvalid('depart_date') || isControlInvalid('depart_time')"
+                  [class.bg-rose-950/10]="isControlInvalid('depart_date') || isControlInvalid('depart_time')"
+                  [class.border-slate-800]="!isControlInvalid('depart_date') && !isControlInvalid('depart_time')"
+                >
                   <div class="flex items-center justify-between mb-1.5">
                     <label class="font-bold text-amber-300 text-[11px] uppercase">
                       ⏱️ Thời Gian Khởi Hành (Depart Time - ETD) *
                     </label>
                     <span class="text-[10px] font-mono text-slate-400">
-                      Kết hợp: <strong class="text-amber-300">{{ formDepartDate() }} {{ formDepartTime() }}</strong>
+                      Kết hợp: <strong class="text-amber-300">{{ formValues().depart_date }} {{ formValues().depart_time }}</strong>
                     </span>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Ngày (Date):</span>
+                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Ngày (Date) *:</span>
                       <input 
                         type="date" 
-                        [value]="formDepartDate()"
-                        (input)="formDepartDate.set($any($event.target).value)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        formControlName="depart_date"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition [color-scheme:dark]"
+                        [class.border-rose-500]="isControlInvalid('depart_date')"
+                        [class.bg-rose-950/20]="isControlInvalid('depart_date')"
+                        [class.border-slate-700]="!isControlInvalid('depart_date')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('depart_date')"
                       />
                     </div>
                     <div>
-                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Giờ (Time):</span>
+                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Giờ (Time) *:</span>
                       <input 
                         type="time" 
-                        [value]="formDepartTime()"
-                        (input)="formDepartTime.set($any($event.target).value)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        formControlName="depart_time"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition [color-scheme:dark]"
+                        [class.border-rose-500]="isControlInvalid('depart_time')"
+                        [class.bg-rose-950/20]="isControlInvalid('depart_time')"
+                        [class.border-slate-700]="!isControlInvalid('depart_time')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('depart_time')"
                       />
                     </div>
                   </div>
+                  @if (isControlInvalid('depart_date') || isControlInvalid('depart_time')) {
+                    <div class="text-[11px] text-rose-400 mt-1.5 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Vui lòng chọn đầy đủ Ngày & Giờ khởi hành ETD (Validators.required)</span>
+                    </div>
+                  }
                 </div>
 
                 <!-- 2. Closing Time (Hạn hạ bãi / Cutoff) -->
-                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                <div class="bg-slate-950 p-3 rounded-2xl border"
+                  [class.border-rose-500]="isControlInvalid('closing_date') || isControlInvalid('closing_time')"
+                  [class.bg-rose-950/10]="isControlInvalid('closing_date') || isControlInvalid('closing_time')"
+                  [class.border-slate-800]="!isControlInvalid('closing_date') && !isControlInvalid('closing_time')"
+                >
                   <div class="flex items-center justify-between mb-1.5">
                     <label class="font-bold text-rose-300 text-[11px] uppercase">
                       🔒 Thời Gian Đóng Sổ (Closing Time / Cut-off) *
                     </label>
                     <span class="text-[10px] font-mono text-slate-400">
-                      Kết hợp: <strong class="text-rose-300">{{ formClosingDate() }} {{ formClosingTime() }}</strong>
+                      Kết hợp: <strong class="text-rose-300">{{ formValues().closing_date }} {{ formValues().closing_time }}</strong>
                     </span>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Ngày (Date):</span>
+                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Ngày (Date) *:</span>
                       <input 
                         type="date" 
-                        [value]="formClosingDate()"
-                        (input)="formClosingDate.set($any($event.target).value)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        formControlName="closing_date"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition [color-scheme:dark]"
+                        [class.border-rose-500]="isControlInvalid('closing_date')"
+                        [class.bg-rose-950/20]="isControlInvalid('closing_date')"
+                        [class.border-slate-700]="!isControlInvalid('closing_date')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('closing_date')"
                       />
                     </div>
                     <div>
-                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Giờ (Time):</span>
+                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Giờ (Time) *:</span>
                       <input 
                         type="time" 
-                        [value]="formClosingTime()"
-                        (input)="formClosingTime.set($any($event.target).value)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        formControlName="closing_time"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition [color-scheme:dark]"
+                        [class.border-rose-500]="isControlInvalid('closing_time')"
+                        [class.bg-rose-950/20]="isControlInvalid('closing_time')"
+                        [class.border-slate-700]="!isControlInvalid('closing_time')"
+                        [class.focus:border-cyan-500]="!isControlInvalid('closing_time')"
                       />
                     </div>
                   </div>
+                  @if (isControlInvalid('closing_date') || isControlInvalid('closing_time')) {
+                    <div class="text-[11px] text-rose-400 mt-1.5 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Vui lòng chọn đầy đủ Ngày & Giờ đóng sổ Cut-off (Validators.required)</span>
+                    </div>
+                  }
+                  @if (isClosingSequenceInvalid()) {
+                    <div class="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Lưu ý: Thời gian đóng sổ Cut-off nên trước hoặc cùng thời điểm khởi hành (ETD)</span>
+                    </div>
+                  }
                 </div>
 
                 <!-- 3. Arrive Time (Cập cảng) -->
-                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                <div class="bg-slate-950 p-3 rounded-2xl border"
+                  [class.border-rose-500]="isControlInvalid('arrive_date') || isControlInvalid('arrive_time') || isDateSequenceInvalid()"
+                  [class.bg-rose-950/10]="isControlInvalid('arrive_date') || isControlInvalid('arrive_time') || isDateSequenceInvalid()"
+                  [class.border-slate-800]="!isControlInvalid('arrive_date') && !isControlInvalid('arrive_time') && !isDateSequenceInvalid()"
+                >
                   <div class="flex items-center justify-between mb-1.5">
                     <label class="font-bold text-emerald-300 text-[11px] uppercase">
                       ⚓ Thời Gian Cập Cảng (Arrive Time - ETA) *
                     </label>
                     <span class="text-[10px] font-mono text-slate-400">
-                      Kết hợp: <strong class="text-emerald-300">{{ formArriveDate() }} {{ formArriveTime() }}</strong>
+                      Kết hợp: <strong class="text-emerald-300">{{ formValues().arrive_date }} {{ formValues().arrive_time }}</strong>
                     </span>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Ngày (Date):</span>
+                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Ngày (Date) *:</span>
                       <input 
                         type="date" 
-                        [value]="formArriveDate()"
-                        (input)="formArriveDate.set($any($event.target).value)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        formControlName="arrive_date"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition [color-scheme:dark]"
+                        [class.border-rose-500]="isControlInvalid('arrive_date') || isDateSequenceInvalid()"
+                        [class.bg-rose-950/20]="isControlInvalid('arrive_date') || isDateSequenceInvalid()"
+                        [class.border-slate-700]="!isControlInvalid('arrive_date') && !isDateSequenceInvalid()"
+                        [class.focus:border-cyan-500]="!isControlInvalid('arrive_date') && !isDateSequenceInvalid()"
                       />
                     </div>
                     <div>
-                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Giờ (Time):</span>
+                      <span class="text-[10px] text-slate-400 block mb-0.5">Chọn Giờ (Time) *:</span>
                       <input 
                         type="time" 
-                        [value]="formArriveTime()"
-                        (input)="formArriveTime.set($any($event.target).value)"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        formControlName="arrive_time"
+                        class="w-full bg-slate-900 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition [color-scheme:dark]"
+                        [class.border-rose-500]="isControlInvalid('arrive_time') || isDateSequenceInvalid()"
+                        [class.bg-rose-950/20]="isControlInvalid('arrive_time') || isDateSequenceInvalid()"
+                        [class.border-slate-700]="!isControlInvalid('arrive_time') && !isDateSequenceInvalid()"
+                        [class.focus:border-cyan-500]="!isControlInvalid('arrive_time') && !isDateSequenceInvalid()"
                       />
                     </div>
                   </div>
+                  @if (isControlInvalid('arrive_date') || isControlInvalid('arrive_time')) {
+                    <div class="text-[11px] text-rose-400 mt-1.5 flex items-center gap-1 font-medium animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Vui lòng chọn đầy đủ Ngày & Giờ cập cảng ETA (Validators.required)</span>
+                    </div>
+                  }
+                  @if (isDateSequenceInvalid()) {
+                    <div class="text-[11px] text-rose-400 mt-1.5 flex items-center gap-1 font-bold animate-fade-in">
+                      <span>⚠️</span>
+                      <span>Thời gian đến (ETA) không được trước thời gian khởi hành (ETD)</span>
+                    </div>
+                  }
                 </div>
               </div>
 
             </div>
 
             <!-- Modal Actions -->
-            <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
-              <button 
-                type="button"
-                (click)="closeVoyageModal()"
-                class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
-              >
-                Hủy Bỏ
-              </button>
-              <button 
-                type="button"
-                (click)="saveVoyage()"
-                [disabled]="isSavingVoyage()"
-                class="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-2 shadow-lg shadow-cyan-500/20 active:scale-[0.98] disabled:opacity-50"
-              >
-                @if (isSavingVoyage()) {
-                  <span class="animate-spin">🔄</span>
-                  <span>Đang lưu...</span>
-                } @else {
-                  <span>💾</span>
-                  <span>Lưu Chuyến Tàu</span>
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2.5">
+              <div>
+                @if (voyageFormSubmitted() && (voyageForm.invalid || isDateSequenceInvalid())) {
+                  <span class="text-[11px] text-rose-400 font-semibold flex items-center gap-1">
+                    <span>⚠️</span> Form còn trường chưa đạt Validators
+                  </span>
                 }
-              </button>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <button 
+                  type="button"
+                  (click)="closeVoyageModal()"
+                  class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+                >
+                  Hủy Bỏ
+                </button>
+                <button 
+                  type="button"
+                  (click)="saveVoyage()"
+                  [disabled]="isSavingVoyage()"
+                  class="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-2 shadow-lg shadow-cyan-500/20 active:scale-[0.98] disabled:opacity-50"
+                >
+                  @if (isSavingVoyage()) {
+                    <span class="animate-spin">🔄</span>
+                    <span>Đang lưu...</span>
+                  } @else {
+                    <span>💾</span>
+                    <span>Lưu Chuyến Tàu</span>
+                  }
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2826,21 +2998,23 @@ export class AppComponent implements OnInit {
   ]);
 
   masterSeaports = signal<MasterSeaport[]>([
+    { id: 3, name: 'HAIPHONG', code: 'VNHPH' },
+    { id: 4, name: 'HOCHIMINH', code: 'VNSGN' },
     { id: 1, name: 'Hải Phòng', code: 'VNHPH' },
     { id: 2, name: 'TP. Hồ Chí Minh', code: 'VNSGN' },
-    { id: 3, name: 'Đà Nẵng', code: 'VNDAD' },
-    { id: 4, name: 'Quy Nhơn', code: 'VNUIH' }
+    { id: 5, name: 'Đà Nẵng', code: 'VNDAD' },
+    { id: 6, name: 'Quy Nhơn', code: 'VNUIH' }
   ]);
 
   masterTerminals = signal<MasterTerminal[]>([
-    { id: 101, name: 'Cảng Tân Vũ (Hải Phòng)', seaport_id: 1 },
-    { id: 102, name: 'Cảng Đình Vũ (Hải Phòng)', seaport_id: 1 },
-    { id: 103, name: 'Cảng Nam Hải Đình Vũ (Hải Phòng)', seaport_id: 1 },
-    { id: 104, name: 'Cảng VIP Green Port (Hải Phòng)', seaport_id: 1 },
-    { id: 201, name: 'Tân Cảng Cát Lái (TP.HCM)', seaport_id: 2 },
-    { id: 202, name: 'Cảng VICT Sài Gòn (TP.HCM)', seaport_id: 2 },
-    { id: 203, name: 'Cảng SP-ITC (TP.HCM)', seaport_id: 2 },
-    { id: 204, name: 'Tân Cảng Hiệp Phước (TP.HCM)', seaport_id: 2 }
+    { id: 101, name: 'Cảng Tân Vũ (Hải Phòng)', seaport_id: 3 },
+    { id: 102, name: 'Cảng Đình Vũ (Hải Phòng)', seaport_id: 3 },
+    { id: 103, name: 'Cảng Nam Hải Đình Vũ (Hải Phòng)', seaport_id: 3 },
+    { id: 104, name: 'Cảng VIP Green Port (Hải Phòng)', seaport_id: 3 },
+    { id: 201, name: 'Tân Cảng Cát Lái (TP.HCM)', seaport_id: 4 },
+    { id: 202, name: 'Cảng VICT Sài Gòn (TP.HCM)', seaport_id: 4 },
+    { id: 203, name: 'Cảng SP-ITC (TP.HCM)', seaport_id: 4 },
+    { id: 204, name: 'Tân Cảng Hiệp Phước (TP.HCM)', seaport_id: 4 }
   ]);
 
   // ==========================================
@@ -2854,547 +3028,18 @@ export class AppComponent implements OnInit {
       vessel_id: 1,
       vessel_name: 'HAIAN PARK',
       voyage_name: 'V.2608S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
+      load_port_id: 3,
+      load_port_name: 'HAIPHONG',
       load_terminal_id: 102,
       load_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
       depart_time: '2026-10-18 22:00',
       closing_time: '2026-10-18 12:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
+      discharge_port_id: 4,
+      discharge_port_name: 'HOCHIMINH',
       discharge_terminal_id: 201,
       discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
       arrive_time: '2026-10-21 10:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_102',
-      supplier_id: 2,
-      supplier_name: 'Công Ty CP Vận Tải Biển Việt Nam (VOSCO)',
-      vessel_id: 3,
-      vessel_name: 'VOSCO STAR',
-      voyage_name: 'V.1202S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      depart_time: '2026-10-19 06:00',
-      closing_time: '2026-10-18 18:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 202,
-      discharge_terminal_name: 'Cảng VICT Sài Gòn (TP.HCM)',
-      arrive_time: '2026-10-21 18:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_103',
-      supplier_id: 3,
-      supplier_name: 'Tổng Công Ty Hàng Hải VN (VIMC)',
-      vessel_id: 4,
-      vessel_name: 'DONG NAI STAR',
-      voyage_name: 'V.0991S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 103,
-      load_terminal_name: 'Cảng Nam Hải Đình Vũ (Hải Phòng)',
-      depart_time: '2026-10-20 14:00',
-      closing_time: '2026-10-20 04:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-10-23 02:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'CLOSING_SOON'
-    },
-    {
-      id: 'voy_104',
-      supplier_id: 4,
-      supplier_name: 'Tân Cảng Shipping (TCS)',
-      vessel_id: 6,
-      vessel_name: 'TÂN CẢNG GLORY',
-      voyage_name: 'TC.2410S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 104,
-      load_terminal_name: 'Cảng VIP Green Port (Hải Phòng)',
-      depart_time: '2026-10-21 08:00',
-      closing_time: '2026-10-20 20:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-10-23 20:00',
-      update_by_id: 22,
-      update_by_name: 'Trần Minh Phát',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_105',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 2,
-      vessel_name: 'HAIAN TIME',
-      voyage_name: 'V.2609S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 102,
-      load_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
-      depart_time: '2026-10-22 18:00',
-      closing_time: '2026-10-22 08:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 203,
-      discharge_terminal_name: 'Cảng SP-ITC (TP.HCM)',
-      arrive_time: '2026-10-25 06:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_106',
-      supplier_id: 5,
-      supplier_name: 'GLS Shipping Lines',
-      vessel_id: 5,
-      vessel_name: 'PACIFIC GRACE',
-      voyage_name: 'GLS.881S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      depart_time: '2026-10-23 12:00',
-      closing_time: '2026-10-23 02:00',
-      discharge_port_id: 3,
-      discharge_port_name: 'Đà Nẵng',
-      discharge_terminal_id: 101,
-      discharge_terminal_name: 'Cảng Tiên Sa',
-      arrive_time: '2026-10-24 16:00',
-      update_by_id: 30,
-      update_by_name: 'Nguyễn Thu Trang',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_107',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 1,
-      vessel_name: 'HAIAN PARK',
-      voyage_name: 'V.2610N',
-      load_port_id: 2,
-      load_port_name: 'TP. Hồ Chí Minh',
-      load_terminal_id: 201,
-      load_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      depart_time: '2026-10-24 10:00',
-      closing_time: '2026-10-23 22:00',
-      discharge_port_id: 1,
-      discharge_port_name: 'Hải Phòng',
-      discharge_terminal_id: 102,
-      discharge_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
-      arrive_time: '2026-10-27 00:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_108',
-      supplier_id: 2,
-      supplier_name: 'Công Ty CP Vận Tải Biển Việt Nam (VOSCO)',
-      vessel_id: 3,
-      vessel_name: 'VOSCO STAR',
-      voyage_name: 'V.1203N',
-      load_port_id: 2,
-      load_port_name: 'TP. Hồ Chí Minh',
-      load_terminal_id: 202,
-      load_terminal_name: 'Cảng VICT Sài Gòn (TP.HCM)',
-      depart_time: '2026-10-25 15:00',
-      closing_time: '2026-10-25 03:00',
-      discharge_port_id: 1,
-      discharge_port_name: 'Hải Phòng',
-      discharge_terminal_id: 101,
-      discharge_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      arrive_time: '2026-10-28 05:00',
-      update_by_id: 44,
-      update_by_name: 'Đỗ Mạnh Cường',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_109',
-      supplier_id: 4,
-      supplier_name: 'Tân Cảng Shipping (TCS)',
-      vessel_id: 6,
-      vessel_name: 'TÂN CẢNG GLORY',
-      voyage_name: 'TC.2411N',
-      load_port_id: 2,
-      load_port_name: 'TP. Hồ Chí Minh',
-      load_terminal_id: 204,
-      load_terminal_name: 'Tân Cảng Hiệp Phước (TP.HCM)',
-      depart_time: '2026-10-26 20:00',
-      closing_time: '2026-10-26 10:00',
-      discharge_port_id: 4,
-      discharge_port_name: 'Quy Nhơn',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Cảng Quy Nhơn',
-      arrive_time: '2026-10-28 08:00',
-      update_by_id: 22,
-      update_by_name: 'Trần Minh Phát',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_110',
-      supplier_id: 3,
-      supplier_name: 'Tổng Công Ty Hàng Hải VN (VIMC)',
-      vessel_id: 4,
-      vessel_name: 'DONG NAI STAR',
-      voyage_name: 'V.0992N',
-      load_port_id: 2,
-      load_port_name: 'TP. Hồ Chí Minh',
-      load_terminal_id: 201,
-      load_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      depart_time: '2026-10-27 16:00',
-      closing_time: '2026-10-27 06:00',
-      discharge_port_id: 1,
-      discharge_port_name: 'Hải Phòng',
-      discharge_terminal_id: 103,
-      discharge_terminal_name: 'Cảng Nam Hải Đình Vũ (Hải Phòng)',
-      arrive_time: '2026-10-30 04:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_111',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 2,
-      vessel_name: 'HAIAN TIME',
-      voyage_name: 'V.2611N',
-      load_port_id: 2,
-      load_port_name: 'TP. Hồ Chí Minh',
-      load_terminal_id: 201,
-      load_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      depart_time: '2026-10-28 22:00',
-      closing_time: '2026-10-28 12:00',
-      discharge_port_id: 3,
-      discharge_port_name: 'Đà Nẵng',
-      discharge_terminal_id: 101,
-      discharge_terminal_name: 'Cảng Tiên Sa',
-      arrive_time: '2026-10-30 14:00',
-      update_by_id: 30,
-      update_by_name: 'Nguyễn Thu Trang',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_112',
-      supplier_id: 5,
-      supplier_name: 'GLS Shipping Lines',
-      vessel_id: 5,
-      vessel_name: 'PACIFIC GRACE',
-      voyage_name: 'GLS.882N',
-      load_port_id: 3,
-      load_port_name: 'Đà Nẵng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tiên Sa',
-      depart_time: '2026-10-29 11:00',
-      closing_time: '2026-10-29 01:00',
-      discharge_port_id: 1,
-      discharge_port_name: 'Hải Phòng',
-      discharge_terminal_id: 101,
-      discharge_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      arrive_time: '2026-10-30 20:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_113',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 1,
-      vessel_name: 'HAIAN PARK',
-      voyage_name: 'V.2612S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 102,
-      load_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
-      depart_time: '2026-10-30 18:00',
-      closing_time: '2026-10-30 08:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-02 06:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_114',
-      supplier_id: 2,
-      supplier_name: 'Công Ty CP Vận Tải Biển Việt Nam (VOSCO)',
-      vessel_id: 3,
-      vessel_name: 'VOSCO STAR',
-      voyage_name: 'V.1204S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      depart_time: '2026-10-31 07:00',
-      closing_time: '2026-10-30 21:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 202,
-      discharge_terminal_name: 'Cảng VICT Sài Gòn (TP.HCM)',
-      arrive_time: '2026-11-02 19:00',
-      update_by_id: 44,
-      update_by_name: 'Đỗ Mạnh Cường',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_115',
-      supplier_id: 4,
-      supplier_name: 'Tân Cảng Shipping (TCS)',
-      vessel_id: 6,
-      vessel_name: 'TÂN CẢNG GLORY',
-      voyage_name: 'TC.2412S',
-      load_port_id: 4,
-      load_port_name: 'Quy Nhơn',
-      load_terminal_id: 201,
-      load_terminal_name: 'Cảng Quy Nhơn',
-      depart_time: '2026-11-01 14:00',
-      closing_time: '2026-11-01 04:00',
-      discharge_port_id: 1,
-      discharge_port_name: 'Hải Phòng',
-      discharge_terminal_id: 104,
-      discharge_terminal_name: 'Cảng VIP Green Port (Hải Phòng)',
-      arrive_time: '2026-11-03 04:00',
-      update_by_id: 22,
-      update_by_name: 'Trần Minh Phát',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_116',
-      supplier_id: 3,
-      supplier_name: 'Tổng Công Ty Hàng Hải VN (VIMC)',
-      vessel_id: 4,
-      vessel_name: 'DONG NAI STAR',
-      voyage_name: 'V.0993S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 103,
-      load_terminal_name: 'Cảng Nam Hải Đình Vũ (Hải Phòng)',
-      depart_time: '2026-11-02 20:00',
-      closing_time: '2026-11-02 10:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-05 08:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_117',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 2,
-      vessel_name: 'HAIAN TIME',
-      voyage_name: 'V.2612S',
-      load_port_id: 3,
-      load_port_name: 'Đà Nẵng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tiên Sa',
-      depart_time: '2026-11-03 16:00',
-      closing_time: '2026-11-03 06:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-05 10:00',
-      update_by_id: 30,
-      update_by_name: 'Nguyễn Thu Trang',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_118',
-      supplier_id: 5,
-      supplier_name: 'GLS Shipping Lines',
-      vessel_id: 5,
-      vessel_name: 'PACIFIC GRACE',
-      voyage_name: 'GLS.883S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      depart_time: '2026-11-04 12:00',
-      closing_time: '2026-11-04 02:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 203,
-      discharge_terminal_name: 'Cảng SP-ITC (TP.HCM)',
-      arrive_time: '2026-11-07 00:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_119',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 1,
-      vessel_name: 'HAIAN PARK',
-      voyage_name: 'V.2613S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 102,
-      load_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
-      depart_time: '2026-11-05 21:00',
-      closing_time: '2026-11-05 11:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-08 09:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_120',
-      supplier_id: 2,
-      supplier_name: 'Công Ty CP Vận Tải Biển Việt Nam (VOSCO)',
-      vessel_id: 3,
-      vessel_name: 'VOSCO STAR',
-      voyage_name: 'V.1205S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 101,
-      load_terminal_name: 'Cảng Tân Vũ (Hải Phòng)',
-      depart_time: '2026-11-06 08:00',
-      closing_time: '2026-11-05 22:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 202,
-      discharge_terminal_name: 'Cảng VICT Sài Gòn (TP.HCM)',
-      arrive_time: '2026-11-08 20:00',
-      update_by_id: 44,
-      update_by_name: 'Đỗ Mạnh Cường',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_121',
-      supplier_id: 4,
-      supplier_name: 'Tân Cảng Shipping (TCS)',
-      vessel_id: 6,
-      vessel_name: 'TÂN CẢNG GLORY',
-      voyage_name: 'TC.2413S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 104,
-      load_terminal_name: 'Cảng VIP Green Port (Hải Phòng)',
-      depart_time: '2026-11-07 15:00',
-      closing_time: '2026-11-07 05:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-10 03:00',
-      update_by_id: 22,
-      update_by_name: 'Trần Minh Phát',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_122',
-      supplier_id: 3,
-      supplier_name: 'Tổng Công Ty Hàng Hải VN (VIMC)',
-      vessel_id: 4,
-      vessel_name: 'DONG NAI STAR',
-      voyage_name: 'V.0994S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 103,
-      load_terminal_name: 'Cảng Nam Hải Đình Vũ (Hải Phòng)',
-      depart_time: '2026-11-08 17:00',
-      closing_time: '2026-11-08 07:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-11 05:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_123',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 2,
-      vessel_name: 'HAIAN TIME',
-      voyage_name: 'V.2613S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 102,
-      load_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
-      depart_time: '2026-11-09 23:00',
-      closing_time: '2026-11-09 13:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-12 11:00',
-      update_by_id: 30,
-      update_by_name: 'Nguyễn Thu Trang',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_124',
-      supplier_id: 5,
-      supplier_name: 'GLS Shipping Lines',
-      vessel_id: 5,
-      vessel_name: 'PACIFIC GRACE',
-      voyage_name: 'GLS.884S',
-      load_port_id: 2,
-      load_port_name: 'TP. Hồ Chí Minh',
-      load_terminal_id: 201,
-      load_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      depart_time: '2026-11-10 14:00',
-      closing_time: '2026-11-10 04:00',
-      discharge_port_id: 3,
-      discharge_port_name: 'Đà Nẵng',
-      discharge_terminal_id: 101,
-      discharge_terminal_name: 'Cảng Tiên Sa',
-      arrive_time: '2026-11-12 06:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
-      status: 'OPEN'
-    },
-    {
-      id: 'voy_125',
-      supplier_id: 1,
-      supplier_name: 'Cty CP Vận Tải Hải An (HATS)',
-      vessel_id: 1,
-      vessel_name: 'HAIAN PARK',
-      voyage_name: 'V.2614S',
-      load_port_id: 1,
-      load_port_name: 'Hải Phòng',
-      load_terminal_id: 102,
-      load_terminal_name: 'Cảng Đình Vũ (Hải Phòng)',
-      depart_time: '2026-11-11 19:00',
-      closing_time: '2026-11-11 09:00',
-      discharge_port_id: 2,
-      discharge_port_name: 'TP. Hồ Chí Minh',
-      discharge_terminal_id: 201,
-      discharge_terminal_name: 'Tân Cảng Cát Lái (TP.HCM)',
-      arrive_time: '2026-11-14 07:00',
-      update_by_id: 15,
-      update_by_name: 'Albert Long',
+      update_by: 'Albert Long',
       status: 'OPEN'
     }
   ]);
@@ -3408,38 +3053,245 @@ export class AppComponent implements OnInit {
   voyageToDelete = signal<ApiVoyageItem | null>(null);
 
   // ==========================================
-  // VOYAGE FORM STATE (MẪU VOYAGEFORM)
+  // VOYAGE FORM STATE & VALIDATORS (SINGLE SOURCE OF TRUTH)
   // ==========================================
-  formId = signal<string | number>('');
-  formSupplierName = signal<string>('');
-  formSupplierId = signal<number | string | null>(null);
-  formVesselName = signal<string>('');
-  formVesselId = signal<number | string | null>(null);
-  formVoyageName = signal<string>('');
-  formLoadPortName = signal<string>('');
-  formLoadPortId = signal<number | string | null>(null);
-  formLoadTerminalName = signal<string>('');
-  formLoadTerminalId = signal<number | string | null>(null);
-  formDischargePortName = signal<string>('');
-  formDischargePortId = signal<number | string | null>(null);
-  formDischargeTerminalName = signal<string>('');
-  formDischargeTerminalId = signal<number | string | null>(null);
-  formUpdateByName = signal<string>('Albert Long');
-  formUpdateById = signal<number | string>(15);
+  voyageFormSubmitted = signal<boolean>(false);
 
-  // Ô nhập ngày (pick date) & nhập giờ (time)
-  formDepartDate = signal<string>('');
-  formDepartTime = signal<string>('08:00');
-  formClosingDate = signal<string>('');
-  formClosingTime = signal<string>('18:00');
-  formArriveDate = signal<string>('');
-  formArriveTime = signal<string>('14:00');
+  voyageForm: FormGroup = new FormGroup({
+    id: new FormControl<string | number>(''),
+    supplier_id: new FormControl<number | string | null>(null, [Validators.required]),
+    supplier_name: new FormControl<string>('', [Validators.required]),
+    vessel_id: new FormControl<number | string | null>(null, [Validators.required]),
+    vessel_name: new FormControl<string>('', [Validators.required]),
+    voyage_name: new FormControl<string>('', [Validators.required, Validators.minLength(2)]),
+    load_port_id: new FormControl<number | string | null>(null, [Validators.required]),
+    load_port_name: new FormControl<string>('', [Validators.required]),
+    load_terminal_id: new FormControl<number | string | null>(null, [Validators.required]),
+    load_terminal_name: new FormControl<string>('', [Validators.required]),
+    discharge_port_id: new FormControl<number | string | null>(null, [Validators.required]),
+    discharge_port_name: new FormControl<string>('', [Validators.required]),
+    discharge_terminal_id: new FormControl<number | string | null>(null, [Validators.required]),
+    discharge_terminal_name: new FormControl<string>('', [Validators.required]),
+    depart_date: new FormControl<string>('', [Validators.required]),
+    depart_time: new FormControl<string>('', [Validators.required]),
+    closing_date: new FormControl<string>('', [Validators.required]),
+    closing_time: new FormControl<string>('', [Validators.required]),
+    arrive_date: new FormControl<string>('', [Validators.required]),
+    arrive_time: new FormControl<string>('', [Validators.required]),
+    update_by: new FormControl<string>('Albert Long', [Validators.required]),
+  });
+
+  // Nguồn sự thật duy nhất (Single Source of Truth) kết nối Reactive Form với Signal qua toSignal
+  formValues: Signal<VoyageFormValue> = toSignal<VoyageFormValue, VoyageFormValue>(
+    this.voyageForm.valueChanges as Observable<VoyageFormValue>,
+    { initialValue: this.voyageForm.getRawValue() as VoyageFormValue }
+  );
 
   // Autocomplete Dropdown State
   activeAutocomplete = signal<'supplier' | 'vessel' | 'voyageName' | 'loadPort' | 'loadTerminal' | 'dischargePort' | 'dischargeTerminal' | 'updateBy' | null>(null);
 
   // Danh sách duplicate từ API [1] duplicate: '${voyage.vessel_id}-${voyage.name}-${voyage.load_terminal}-${voyage.discharge_terminal}-${voyage.supplier_id}'
   apiDuplicates = signal<string[]>([]);
+
+  // ==========================================
+  // VALIDATORS HELPER FUNCTIONS
+  // ==========================================
+  isControlInvalid(controlName: string): boolean {
+    const ctrl = this.voyageForm.get(controlName);
+    if (!ctrl) return false;
+    return ctrl.invalid && (ctrl.touched || ctrl.dirty || this.voyageFormSubmitted());
+  }
+
+  onFieldBlur(controlName: string) {
+    this.voyageForm.get(controlName)?.markAsTouched();
+  }
+
+  isDateSequenceInvalid = computed(() => {
+    const f = this.formValues();
+    const depDate = f.depart_date;
+    const arrDate = f.arrive_date;
+    if (!depDate || !arrDate) return false;
+    const dep = `${depDate}T${f.depart_time || '00:00'}`;
+    const arr = `${arrDate}T${f.arrive_time || '23:59'}`;
+    return arr < dep;
+  });
+
+  isClosingSequenceInvalid = computed(() => {
+    const f = this.formValues();
+    const clsDate = f.closing_date;
+    const depDate = f.depart_date;
+    if (!clsDate || !depDate) return false;
+    const cls = `${clsDate}T${f.closing_time || '00:00'}`;
+    const dep = `${depDate}T${f.depart_time || '23:59'}`;
+    return cls > dep;
+  });
+
+  // Tự động đồng bộ các trường ID tương ứng khi người dùng nhập liệu vào FormControlName
+  setupFormAutoMatching() {
+    this.voyageForm.get('supplier_name')?.valueChanges.subscribe((val: any) => {
+      if (typeof val === 'string') {
+        const matched = this.masterSuppliers().find(s => s.name.toLowerCase() === val.trim().toLowerCase());
+        const currentId = this.voyageForm.get('supplier_id')?.value;
+        const newId = matched ? matched.id : (!val.trim() ? null : currentId);
+        if (newId !== currentId) {
+          this.voyageForm.patchValue({ supplier_id: newId }, { emitEvent: false });
+        }
+      }
+    });
+
+    this.voyageForm.get('vessel_name')?.valueChanges.subscribe((val: any) => {
+      if (typeof val === 'string') {
+        const matched = this.masterVessels().find(v => v.name.toLowerCase() === val.trim().toLowerCase());
+        const currentId = this.voyageForm.get('vessel_id')?.value;
+        const newId = matched ? matched.id : (!val.trim() ? null : currentId);
+        if (newId !== currentId) {
+          this.voyageForm.patchValue({ vessel_id: newId }, { emitEvent: false });
+        }
+      }
+    });
+
+
+    this.voyageForm.get('load_port_name')?.valueChanges.subscribe((val: any) => {
+      if (typeof val === 'string') {
+        const matched = this.masterSeaports().find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+        const currentId = this.voyageForm.get('load_port_id')?.value;
+        const newId = matched ? matched.id : (!val.trim() ? null : currentId);
+        if (newId !== currentId) {
+          this.voyageForm.patchValue({ load_port_id: newId }, { emitEvent: false });
+        }
+      }
+    });
+
+    this.voyageForm.get('load_terminal_name')?.valueChanges.subscribe((val: any) => {
+      if (typeof val === 'string') {
+        const matched = this.masterTerminals().find(t => t.name.toLowerCase() === val.trim().toLowerCase());
+        const currentId = this.voyageForm.get('load_terminal_id')?.value;
+        const newId = matched ? matched.id : (!val.trim() ? null : currentId);
+        if (newId !== currentId) {
+          this.voyageForm.patchValue({ load_terminal_id: newId }, { emitEvent: false });
+        }
+      }
+    });
+
+    this.voyageForm.get('discharge_port_name')?.valueChanges.subscribe((val: any) => {
+      if (typeof val === 'string') {
+        const matched = this.masterSeaports().find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+        const currentId = this.voyageForm.get('discharge_port_id')?.value;
+        const newId = matched ? matched.id : (!val.trim() ? null : currentId);
+        if (newId !== currentId) {
+          this.voyageForm.patchValue({ discharge_port_id: newId }, { emitEvent: false });
+        }
+      }
+    });
+
+    this.voyageForm.get('discharge_terminal_name')?.valueChanges.subscribe((val: any) => {
+      if (typeof val === 'string') {
+        const matched = this.masterTerminals().find(t => t.name.toLowerCase() === val.trim().toLowerCase());
+        const currentId = this.voyageForm.get('discharge_terminal_id')?.value;
+        const newId = matched ? matched.id : (!val.trim() ? null : currentId);
+        if (newId !== currentId) {
+          this.voyageForm.patchValue({ discharge_terminal_id: newId }, { emitEvent: false });
+        }
+      }
+    });
+  }
+
+  onSupplierInput(val: string) {
+    const matched = this.masterSuppliers().find(s => s.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      supplier_name: val,
+      supplier_id: matched ? matched.id : (!val.trim() ? null : this.voyageForm.get('supplier_id')?.value)
+    });
+    this.voyageForm.get('supplier_name')?.markAsDirty();
+  }
+
+  onVesselInput(val: string) {
+    const matched = this.masterVessels().find(v => v.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      vessel_name: val,
+      vessel_id: matched ? matched.id : (!val.trim() ? null : this.voyageForm.get('vessel_id')?.value)
+    });
+    this.voyageForm.get('vessel_name')?.markAsDirty();
+  }
+
+  onVoyageNameInput(val: string) {
+    this.voyageForm.patchValue({ voyage_name: val });
+    this.voyageForm.get('voyage_name')?.markAsDirty();
+  }
+
+  onUpdateByInput(val: string) {
+    const matched = this.masterUsers().find(u => u.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      update_by: val
+    });
+    this.voyageForm.get('update_by')?.markAsDirty();
+  }
+
+  onLoadPortInput(val: string) {
+    const matched = this.masterSeaports().find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      load_port_name: val,
+      load_port_id: matched ? matched.id : (!val.trim() ? null : this.voyageForm.get('load_port_id')?.value)
+    });
+    this.voyageForm.get('load_port_name')?.markAsDirty();
+  }
+
+  onLoadTerminalInput(val: string) {
+    const matched = this.masterTerminals().find(t => t.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      load_terminal_name: val,
+      load_terminal_id: matched ? matched.id : (!val.trim() ? null : this.voyageForm.get('load_terminal_id')?.value)
+    });
+    this.voyageForm.get('load_terminal_name')?.markAsDirty();
+  }
+
+  onDischargePortInput(val: string) {
+    const matched = this.masterSeaports().find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      discharge_port_name: val,
+      discharge_port_id: matched ? matched.id : (!val.trim() ? null : this.voyageForm.get('discharge_port_id')?.value)
+    });
+    this.voyageForm.get('discharge_port_name')?.markAsDirty();
+  }
+
+  onDischargeTerminalInput(val: string) {
+    const matched = this.masterTerminals().find(t => t.name.toLowerCase() === val.trim().toLowerCase());
+    this.voyageForm.patchValue({
+      discharge_terminal_name: val,
+      discharge_terminal_id: matched ? matched.id : (!val.trim() ? null : this.voyageForm.get('discharge_terminal_id')?.value)
+    });
+    this.voyageForm.get('discharge_terminal_name')?.markAsDirty();
+  }
+
+  onDepartDateInput(val: string) {
+    this.voyageForm.patchValue({ depart_date: val });
+    this.voyageForm.get('depart_date')?.markAsDirty();
+  }
+
+  onDepartTimeInput(val: string) {
+    this.voyageForm.patchValue({ depart_time: val });
+    this.voyageForm.get('depart_time')?.markAsDirty();
+  }
+
+  onClosingDateInput(val: string) {
+    this.voyageForm.patchValue({ closing_date: val });
+    this.voyageForm.get('closing_date')?.markAsDirty();
+  }
+
+  onClosingTimeInput(val: string) {
+    this.voyageForm.patchValue({ closing_time: val });
+    this.voyageForm.get('closing_time')?.markAsDirty();
+  }
+
+  onArriveDateInput(val: string) {
+    this.voyageForm.patchValue({ arrive_date: val });
+    this.voyageForm.get('arrive_date')?.markAsDirty();
+  }
+
+  onArriveTimeInput(val: string) {
+    this.voyageForm.patchValue({ arrive_time: val });
+    this.voyageForm.get('arrive_time')?.markAsDirty();
+  }
 
   // ==========================================
   // VOYAGE PAGINATION STATE (20, 50, 100)
@@ -3449,12 +3301,12 @@ export class AppComponent implements OnInit {
   pageSizeOptions = [20, 50, 100];
 
   // ==========================================
-  // ADVANCED FILTER STATE (POL, POD, >=ETD, <=ETA)
+  // ADVANCED FILTER STATE (MẶC ĐỊNH POL: HAIPHONG #3, POD: HOCHIMINH #4)
   // ==========================================
-  filterPolName = signal<string>('');
-  filterPolId = signal<number | string | null>(null);
-  filterPodName = signal<string>('');
-  filterPodId = signal<number | string | null>(null);
+  filterPolName = signal<string>('HAIPHONG');
+  filterPolId = signal<number | string | null>(3);
+  filterPodName = signal<string>('HOCHIMINH');
+  filterPodId = signal<number | string | null>(4);
   filterMinEtd = signal<string>(''); // >= ETD
   filterMaxEta = signal<string>(''); // <= ETA
   activeTableFilterDropdown = signal<'filterPol' | 'filterPod' | null>(null);
@@ -3504,18 +3356,30 @@ export class AppComponent implements OnInit {
 
       // 2. POL filter (Port of loading)
       if (polId !== null && polId !== undefined && polId !== '') {
-        const vPolId = v.load_port_id ?? v.load_port;
-        if (String(vPolId) !== String(polId)) return false;
+        const vPolId = v.load_port_id ?? (v as any).load_port;
+        const vPolName = (v.load_port_name || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '');
+        const targetPolName = (polName || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '');
+        const idMatches = String(vPolId) === String(polId) ||
+          ((String(polId) === '3' || String(polId) === '1') && (String(vPolId) === '3' || String(vPolId) === '1'));
+        const nameMatches = Boolean(targetPolName && (vPolName.includes(targetPolName) || targetPolName.includes(vPolName)));
+        if (!idMatches && !nameMatches) return false;
       } else if (polName) {
-        if (!(v.load_port_name || '').toLowerCase().includes(polName)) return false;
+        const vPolName = (v.load_port_name || '').toLowerCase();
+        if (!vPolName.includes(polName)) return false;
       }
 
       // 3. POD filter (Port of discharge)
       if (podId !== null && podId !== undefined && podId !== '') {
-        const vPodId = v.discharge_port_id ?? v.discharge_port;
-        if (String(vPodId) !== String(podId)) return false;
+        const vPodId = v.discharge_port_id ?? (v as any).discharge_port;
+        const vPodName = (v.discharge_port_name || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '');
+        const targetPodName = (podName || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '');
+        const idMatches = String(vPodId) === String(podId) ||
+          ((String(podId) === '4' || String(podId) === '2') && (String(vPodId) === '4' || String(vPodId) === '2'));
+        const nameMatches = Boolean(targetPodName && (vPodName.includes(targetPodName) || targetPodName.includes(vPodName)));
+        if (!idMatches && !nameMatches) return false;
       } else if (podName) {
-        if (!(v.discharge_port_name || '').toLowerCase().includes(podName)) return false;
+        const vPodName = (v.discharge_port_name || '').toLowerCase();
+        if (!vPodName.includes(podName)) return false;
       }
 
       // 4. >= ETD (Khởi hành từ ngày)
@@ -3579,29 +3443,30 @@ export class AppComponent implements OnInit {
   });
 
   filteredSuppliers = computed(() => {
-    const q = this.formSupplierName().toLowerCase().trim();
+    const q = (this.formValues().supplier_name || '').toLowerCase().trim();
     const list = this.masterSuppliers();
     if (!q) return list;
     return list.filter(s => (s.name || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q));
   });
 
   filteredVessels = computed(() => {
-    const q = this.formVesselName().toLowerCase().trim();
+    const q = (this.formValues().vessel_name || '').toLowerCase().trim();
     const list = this.masterVessels();
     if (!q) return list;
     return list.filter(v => (v.name || '').toLowerCase().includes(q) || (v.operator || '').toLowerCase().includes(q));
   });
 
   filteredLoadPorts = computed(() => {
-    const q = this.formLoadPortName().toLowerCase().trim();
+    const q = (this.formValues().load_port_name || '').toLowerCase().trim();
     const list = this.masterSeaports();
     if (!q) return list;
     return list.filter(p => (p.name || '').toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q));
   });
 
   filteredLoadTerminals = computed(() => {
-    const q = this.formLoadTerminalName().toLowerCase().trim();
-    const portId = this.formLoadPortId();
+    const f = this.formValues();
+    const q = (f.load_terminal_name || '').toLowerCase().trim();
+    const portId = f.load_port_id;
     let list = this.masterTerminals();
     if (portId !== null && portId !== undefined) {
       list = list.filter(t => String(t.seaport_id) === String(portId));
@@ -3611,15 +3476,16 @@ export class AppComponent implements OnInit {
   });
 
   filteredDischargePorts = computed(() => {
-    const q = this.formDischargePortName().toLowerCase().trim();
+    const q = (this.formValues().discharge_port_name || '').toLowerCase().trim();
     const list = this.masterSeaports();
     if (!q) return list;
     return list.filter(p => (p.name || '').toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q));
   });
 
   filteredDischargeTerminals = computed(() => {
-    const q = this.formDischargeTerminalName().toLowerCase().trim();
-    const portId = this.formDischargePortId();
+    const f = this.formValues();
+    const q = (f.discharge_terminal_name || '').toLowerCase().trim();
+    const portId = f.discharge_port_id;
     let list = this.masterTerminals();
     if (portId !== null && portId !== undefined) {
       list = list.filter(t => String(t.seaport_id) === String(portId));
@@ -3629,26 +3495,19 @@ export class AppComponent implements OnInit {
   });
 
   filteredUsers = computed(() => {
-    const q = this.formUpdateByName().toLowerCase().trim();
+    const q = (this.formValues().update_by || '').toLowerCase().trim();
     const list = this.masterUsers();
     if (!q) return list;
     return list.filter(u => (u.name || '').toLowerCase().includes(q));
   });
 
   filteredVoyageSuggestions = computed(() => {
-    const q = this.formVoyageName().toLowerCase().trim();
+    const q = (this.formValues().voyage_name || '').toLowerCase().trim();
     const set = new Set<string>();
     // Lấy các số chuyến có sẵn trong hệ thống
     this.apiVoyages().forEach(v => {
       if (v.voyage_name) set.add(v.voyage_name);
     });
-    // Gợi ý thêm các mẫu số chuyến phổ biến năm 2026
-    set.add('V.2608S');
-    set.add('V.2609N');
-    set.add('V.1202S');
-    set.add('V.1203N');
-    set.add('V.0991S');
-    set.add('V.0992N');
 
     const list = Array.from(set);
     if (!q) return list.slice(0, 8);
@@ -3656,11 +3515,12 @@ export class AppComponent implements OnInit {
   });
 
   currentFormDuplicateKey = computed(() => {
-    const vesselId = this.formVesselId();
-    const voyName = this.formVoyageName().trim();
-    const loadTermId = this.formLoadTerminalId();
-    const disTermId = this.formDischargeTerminalId();
-    const suppId = this.formSupplierId();
+    const f = this.formValues();
+    const vesselId = f.vessel_id;
+    const voyName = (f.voyage_name || '').trim();
+    const loadTermId = f.load_terminal_id;
+    const disTermId = f.discharge_terminal_id;
+    const suppId = f.supplier_id;
     if (!vesselId || !voyName || !loadTermId || !disTermId || !suppId) return '';
     return `${vesselId}-${voyName}-${loadTermId}-${disTermId}-${suppId}`;
   });
@@ -3670,9 +3530,9 @@ export class AppComponent implements OnInit {
     const currentKey = this.currentFormDuplicateKey();
     if (!currentKey) return false;
 
+    const currentId = this.formValues().id;
     // Nếu đang Edit và key trùng với chuyến đang chọn sửa thì không coi là duplicate
     if (this.voyageModalMode() === 'EDIT') {
-      const currentId = this.formId();
       const currentVoy = this.apiVoyages().find(v => v.id === currentId);
       if (currentVoy) {
         const origKey = `${currentVoy.vessel_id}-${currentVoy.voyage_name}-${currentVoy.load_terminal_id || currentVoy.load_terminal}-${currentVoy.discharge_terminal_id || currentVoy.discharge_terminal}-${currentVoy.supplier_id}`;
@@ -3683,29 +3543,12 @@ export class AppComponent implements OnInit {
     if (this.apiDuplicates().includes(currentKey)) return true;
 
     return this.apiVoyages().some(v => {
-      if (this.voyageModalMode() === 'EDIT' && v.id === this.formId()) return false;
+      if (this.voyageModalMode() === 'EDIT' && v.id === currentId) return false;
       const vKey = `${v.vessel_id}-${v.voyage_name}-${v.load_terminal_id || v.load_terminal}-${v.discharge_terminal_id || v.discharge_terminal}-${v.supplier_id}`;
       return vKey === currentKey;
     });
   });
 
-  vesselSchedules = computed<VesselSchedule[]>(() => {
-    return this.apiVoyages().map((v: ApiVoyageItem) => ({
-      id: String(v.id || v.voyage_name),
-      carrier: v.supplier_name || 'HẢI AN (HATS)',
-      vesselName: v.vessel_name,
-      voyage: v.voyage_name,
-      originPort: `${v.load_port_name || 'Hải Phòng'} (${v.load_terminal_name || 'Đình Vũ'})`,
-      destPort: `${v.discharge_port_name || 'TP.HCM'} (${v.discharge_terminal_name || 'Cát Lái'})`,
-      etd: v.depart_time,
-      eta: v.arrive_time,
-      cutoff: v.closing_time,
-      transitTime: '2.5 ngày',
-      status: v.status || 'OPEN',
-      baseOceanFreight20: 3800000,
-      baseOceanFreight40: 6200000
-    }));
-  });
 
   bookings = signal<BookingRecord[]>([
     {
@@ -3923,9 +3766,43 @@ export class AppComponent implements OnInit {
     if (token) {
       this.isLoggedIn.set(true);
     }
+    // Tự động kết nối auto-matching của Reactive Form
+    this.setupFormAutoMatching();
     // Tải sẵn danh mục đối chiếu và danh mục tàu
     this.fetchMasterData();
     this.fetchVoyages();
+  }
+
+  // ==========================================
+  // XỬ LÝ LỖI HẾT HẠN TOKEN (JWT EXPIRED)
+  // ==========================================
+  handleJwtExpired(data?: any, status?: number): boolean {
+    if (!data && status !== 401) return false;
+
+    const isExpired = 
+      data?.error === 'jwt expired' ||
+      data?.message === 'jwt expired' ||
+      (typeof data?.error === 'string' && data.error.toLowerCase().includes('jwt expired')) ||
+      (typeof data?.message === 'string' && data.message.toLowerCase().includes('jwt expired')) ||
+      (typeof data === 'string' && data.toLowerCase().includes('jwt expired')) ||
+      (status === 401 && (data?.error === 'jwt expired' || data?.message === 'jwt expired' || !data?.message?.toLowerCase().includes('password')));
+
+    if (isExpired) {
+      console.warn('Phát hiện token hết hạn ({"error":"jwt expired"}). Đang xóa token và yêu cầu đăng nhập lại.');
+      // 1. Xóa token trong localStorage
+      localStorage.removeItem('accessToken');
+      // 2. Chuyển trạng thái ứng dụng về chưa đăng nhập
+      this.isLoggedIn.set(false);
+      this.authTab.set('LOGIN');
+      this.activeStep.set(1);
+      // 3. Đóng modal voyage nếu đang mở và reset form
+      this.voyageModalMode.set(null);
+      this.resetVoyageFormToDefaults();
+      // 4. Báo lỗi rõ ràng và yêu cầu đăng nhập lại
+      this.showToast('error', 'Phiên đăng nhập hết hạn', 'Token xác thực đã hết hạn (JWT expired). Vui lòng đăng nhập lại.');
+      return true;
+    }
+    return false;
   }
 
   // 1. API TẢI DỮ LIỆU DANH MỤC ĐỐI CHIẾU (GET)
@@ -3938,8 +3815,11 @@ export class AppComponent implements OnInit {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (this.handleJwtExpired(data, response.status)) {
+        return;
+      }
+      if (response.ok && data) {
         if (Array.isArray(data)) {
           if (data[0] && Array.isArray(data[0])) this.masterVessels.set(data[0]);
           if (data[1] && Array.isArray(data[1])) this.masterSuppliers.set(data[1]);
@@ -3964,22 +3844,48 @@ export class AppComponent implements OnInit {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (this.handleJwtExpired(data, response.status)) {
+        return;
+      }
+      if (response.ok && data) {
+        const formatEpochDate = (timestamp: any): string => {
+          if (!timestamp && timestamp !== 0) return '';
+
+          let num = Number(timestamp);
+          if (isNaN(num) || num <= 0) return String(timestamp);
+
+          // Nếu API trả về giây (10 chữ số), nhân 1000 để chuyển sang miligiây (13 chữ số)
+          if (num < 10000000000) {
+            num = num * 1000;
+          }
+          const hoursOffset = new Date().getTimezoneOffset();
+          const date = new Date(num - hoursOffset * 60*1000 );
+          if (isNaN(date.getTime())) return '';
+
+          const pad = (n: number) => (n < 10 ? '0' + n : n);
+          const year = date.getFullYear();
+          const month = pad(date.getMonth() + 1);
+          const day = pad(date.getDate());
+          const hours = pad(date.getHours());
+          const minutes = pad(date.getMinutes());
+
+          return `${year}-${month}-${day} ${hours}:${minutes}`;
+        };
         if (Array.isArray(data)) {
           if (Array.isArray(data[0]) && data[0].length > 0) {
             const mapped: ApiVoyageItem[] = data[0].map((item: any) => ({
               ...item,
+              supplier_name: item.full_name ?? null,
+              voyage_name: item.name,
               load_port_id: item.load_port_id ?? item.load_port ?? null,
-              load_port: item.load_port ?? item.load_port_id ?? null,
               load_terminal_id: item.load_terminal_id ?? item.load_terminal ?? null,
-              load_terminal: item.load_terminal ?? item.load_terminal_id ?? null,
               discharge_port_id: item.discharge_port_id ?? item.discharge_port ?? null,
-              discharge_port: item.discharge_port ?? item.discharge_port_id ?? null,
               discharge_terminal_id: item.discharge_terminal_id ?? item.discharge_terminal ?? null,
-              discharge_terminal: item.discharge_terminal ?? item.discharge_terminal_id ?? null,
-              update_by_name: item.update_by_name || 'Albert Long',
-              update_by_id: item.update_by_id || 15
+              depart_time: formatEpochDate(item.depart_time),
+              closing_time: formatEpochDate(item.closing_time),
+              arrive_time: formatEpochDate(item.arrive_time),
+              update_by: item.update_by || null,
             }));
             this.apiVoyages.set(mapped);
           }
@@ -4016,13 +3922,16 @@ export class AppComponent implements OnInit {
         },
         body: JSON.stringify(payload)
       });
+      const errJson = await response.json().catch(() => null);
+      if (this.handleJwtExpired(errJson, response.status)) {
+        return false;
+      }
       if (response.ok) {
         this.showToast('success', 'Lưu thành công', 'Chuyến tàu đã được cập nhật lên hệ thống máy chủ.');
         await this.fetchVoyages();
         return true;
       } else {
-        const errJson = await response.json().catch(() => null);
-        this.showToast('warning', 'Phản hồi từ máy chủ', errJson?.message || 'Lưu thành công trên giao diện.');
+        this.showToast('warning', 'Phản hồi từ máy chủ', errJson?.message || errJson?.error || 'Lưu thành công trên giao diện.');
         return true;
       }
     } catch (err) {
@@ -4046,75 +3955,117 @@ export class AppComponent implements OnInit {
   }
 
   selectSupplierItem(s: MasterSupplier) {
-    this.formSupplierName.set(s.name);
-    this.formSupplierId.set(s.id);
+    this.voyageForm.patchValue({
+      supplier_name: s.name,
+      supplier_id: s.id
+    });
+    this.voyageForm.get('supplier_name')?.markAsDirty();
+    this.voyageForm.get('supplier_id')?.markAsDirty();
     this.activeAutocomplete.set(null);
   }
 
   selectVesselItem(v: MasterVessel) {
-    this.formVesselName.set(v.name);
-    this.formVesselId.set(v.id);
+    const patch: any = {
+      vessel_name: v.name,
+      vessel_id: v.id
+    };
     // Nếu tàu có operator khớp với mã hãng tàu và chưa chọn hãng tàu, tự động khớp hãng tàu
-    if (v.operator && !this.formSupplierId()) {
+    if (v.operator && !this.formValues().supplier_id) {
       const matchedSupplier = this.masterSuppliers().find(s => s.code === v.operator || (s.name || '').includes(v.operator!));
       if (matchedSupplier) {
-        this.formSupplierName.set(matchedSupplier.name);
-        this.formSupplierId.set(matchedSupplier.id);
+        patch.supplier_name = matchedSupplier.name;
+        patch.supplier_id = matchedSupplier.id;
       }
+    }
+    this.voyageForm.patchValue(patch);
+    this.voyageForm.get('vessel_name')?.markAsDirty();
+    this.voyageForm.get('vessel_id')?.markAsDirty();
+    if (patch.supplier_id) {
+      this.voyageForm.get('supplier_name')?.markAsDirty();
+      this.voyageForm.get('supplier_id')?.markAsDirty();
     }
     this.activeAutocomplete.set(null);
   }
 
   selectVoyageNameItem(name: string) {
-    this.formVoyageName.set(name);
+    this.voyageForm.patchValue({ voyage_name: name });
+    this.voyageForm.get('voyage_name')?.markAsDirty();
     this.activeAutocomplete.set(null);
   }
 
   selectLoadPortItem(p: MasterSeaport) {
-    this.formLoadPortName.set(p.name);
-    this.formLoadPortId.set(p.id);
-    this.formLoadTerminalName.set('');
-    this.formLoadTerminalId.set(null);
+    this.voyageForm.patchValue({
+      load_port_name: p.name,
+      load_port_id: p.id,
+      load_terminal_name: '',
+      load_terminal_id: null
+    });
+    this.voyageForm.get('load_port_name')?.markAsDirty();
+    this.voyageForm.get('load_port_id')?.markAsDirty();
     this.activeAutocomplete.set(null);
   }
 
   selectLoadTerminalItem(t: MasterTerminal) {
-    this.formLoadTerminalName.set(t.name);
-    this.formLoadTerminalId.set(t.id);
-    if (t.seaport_id && !this.formLoadPortId()) {
+    const patch: any = {
+      load_terminal_name: t.name,
+      load_terminal_id: t.id
+    };
+    if (t.seaport_id && !this.formValues().load_port_id) {
       const parentPort = this.masterSeaports().find(p => String(p.id) === String(t.seaport_id));
       if (parentPort) {
-        this.formLoadPortName.set(parentPort.name);
-        this.formLoadPortId.set(parentPort.id);
+        patch.load_port_name = parentPort.name;
+        patch.load_port_id = parentPort.id;
       }
+    }
+    this.voyageForm.patchValue(patch);
+    this.voyageForm.get('load_terminal_name')?.markAsDirty();
+    this.voyageForm.get('load_terminal_id')?.markAsDirty();
+    if (patch.load_port_id) {
+      this.voyageForm.get('load_port_name')?.markAsDirty();
+      this.voyageForm.get('load_port_id')?.markAsDirty();
     }
     this.activeAutocomplete.set(null);
   }
 
   selectDischargePortItem(p: MasterSeaport) {
-    this.formDischargePortName.set(p.name);
-    this.formDischargePortId.set(p.id);
-    this.formDischargeTerminalName.set('');
-    this.formDischargeTerminalId.set(null);
+    this.voyageForm.patchValue({
+      discharge_port_name: p.name,
+      discharge_port_id: p.id,
+      discharge_terminal_name: '',
+      discharge_terminal_id: null
+    });
+    this.voyageForm.get('discharge_port_name')?.markAsDirty();
+    this.voyageForm.get('discharge_port_id')?.markAsDirty();
     this.activeAutocomplete.set(null);
   }
 
   selectDischargeTerminalItem(t: MasterTerminal) {
-    this.formDischargeTerminalName.set(t.name);
-    this.formDischargeTerminalId.set(t.id);
-    if (t.seaport_id && !this.formDischargePortId()) {
+    const patch: any = {
+      discharge_terminal_name: t.name,
+      discharge_terminal_id: t.id
+    };
+    if (t.seaport_id && !this.formValues().discharge_port_id) {
       const parentPort = this.masterSeaports().find(p => String(p.id) === String(t.seaport_id));
       if (parentPort) {
-        this.formDischargePortName.set(parentPort.name);
-        this.formDischargePortId.set(parentPort.id);
+        patch.discharge_port_name = parentPort.name;
+        patch.discharge_port_id = parentPort.id;
       }
+    }
+    this.voyageForm.patchValue(patch);
+    this.voyageForm.get('discharge_terminal_name')?.markAsDirty();
+    this.voyageForm.get('discharge_terminal_id')?.markAsDirty();
+    if (patch.discharge_port_id) {
+      this.voyageForm.get('discharge_port_name')?.markAsDirty();
+      this.voyageForm.get('discharge_port_id')?.markAsDirty();
     }
     this.activeAutocomplete.set(null);
   }
 
   selectUserItem(u: MasterUser) {
-    this.formUpdateByName.set(u.name);
-    this.formUpdateById.set(u.id);
+    this.voyageForm.patchValue({
+      update_by: u.name,
+    });
+    this.voyageForm.get('update_by')?.markAsDirty();
     this.activeAutocomplete.set(null);
   }
 
@@ -4184,7 +4135,20 @@ export class AppComponent implements OnInit {
     this.voyageCurrentPage.set(1);
   }
 
-  resetVoyageFilters() {
+  resetVoyageFiltersToDefault() {
+    this.voyageSearchQuery.set('');
+    this.filterPolName.set('HAIPHONG');
+    this.filterPolId.set(3);
+    this.filterPodName.set('HOCHIMINH');
+    this.filterPodId.set(4);
+    this.filterMinEtd.set('');
+    this.filterMaxEta.set('');
+    this.voyageCurrentPage.set(1);
+    this.activeTableFilterDropdown.set(null);
+    this.showToast('info', 'Bộ lọc mặc định', 'Đã đặt lại bộ lọc mặc định: POL HAIPHONG (#3) ➔ POD HOCHIMINH (#4).');
+  }
+
+  clearAllVoyageFilters() {
     this.voyageSearchQuery.set('');
     this.filterPolName.set('');
     this.filterPolId.set(null);
@@ -4194,7 +4158,11 @@ export class AppComponent implements OnInit {
     this.filterMaxEta.set('');
     this.voyageCurrentPage.set(1);
     this.activeTableFilterDropdown.set(null);
-    this.showToast('info', 'Đã đặt lại bộ lọc', 'Hiển thị toàn bộ danh sách chuyến tàu.');
+    this.showToast('info', 'Xóa bộ lọc', 'Hiển thị tất cả các chuyến tàu không giới hạn cảng.');
+  }
+
+  resetVoyageFilters() {
+    this.resetVoyageFiltersToDefault();
   }
 
   setVoyageViewMode(mode: 'auto' | 'table' | 'card') {
@@ -4223,11 +4191,41 @@ export class AppComponent implements OnInit {
   // ==========================================
   // VOYAGE MODAL OPEN / EDIT / COPY / DELETE
   // ==========================================
+  resetVoyageFormToDefaults() {
+    this.voyageFormSubmitted.set(false);
+    this.voyageForm.reset({
+      id: '',
+      supplier_id: null,
+      supplier_name: '',
+      vessel_id: null,
+      vessel_name: '',
+      voyage_name: '',
+      load_port_id: null,
+      load_port_name: '',
+      load_terminal_id: null,
+      load_terminal_name: '',
+      discharge_port_id: null,
+      discharge_port_name: '',
+      discharge_terminal_id: null,
+      discharge_terminal_name: '',
+      depart_date: '',
+      depart_time: '00:00',
+      closing_date: '',
+      closing_time: '00:00',
+      arrive_date: '',
+      arrive_time: '00:00',
+      update_by: 'Albert Long',
+    });
+    this.voyageForm.markAsPristine();
+    this.voyageForm.markAsUntouched();
+    this.activeAutocomplete.set(null);
+  }
+
   parseDateTime(dtStr: string): { date: string; time: string } {
-    if (!dtStr) return { date: '', time: '08:00' };
+    if (!dtStr) return { date: '', time: '' };
     if (dtStr.includes('T')) {
       const parts = dtStr.split('T');
-      return { date: parts[0], time: (parts[1] || '08:00').substring(0, 5) };
+      return { date: parts[0], time: (parts[1] || '').substring(0, 5) };
     }
     if (dtStr.includes(' ')) {
       const parts = dtStr.split(' ');
@@ -4236,172 +4234,170 @@ export class AppComponent implements OnInit {
         const dp = d.split('/');
         if (dp.length === 3) d = `${dp[2]}-${dp[1].padStart(2, '0')}-${dp[0].padStart(2, '0')}`;
       }
-      return { date: d, time: (parts[1] || '08:00').substring(0, 5) };
+      return { date: d, time: (parts[1] || '').substring(0, 5) };
     }
-    return { date: dtStr, time: '08:00' };
+    return { date: dtStr, time: '' };
   }
 
   openCreateVoyageModal() {
+    // 1. Refresh toàn bộ dữ liệu form về mặc định trước khi bật lên
+    this.resetVoyageFormToDefaults();
     this.voyageModalMode.set('CREATE');
-    this.formId.set('');
-    this.formSupplierName.set('');
-    this.formSupplierId.set(null);
-    this.formVesselName.set('');
-    this.formVesselId.set(null);
-    this.formVoyageName.set('');
-    this.formLoadPortName.set('Hải Phòng');
-    this.formLoadPortId.set(1);
-    this.formLoadTerminalName.set('Cảng Đình Vũ (Hải Phòng)');
-    this.formLoadTerminalId.set(102);
-    this.formDischargePortName.set('TP. Hồ Chí Minh');
-    this.formDischargePortId.set(2);
-    this.formDischargeTerminalName.set('Tân Cảng Cát Lái (TP.HCM)');
-    this.formDischargeTerminalId.set(201);
-    this.formUpdateByName.set('Albert Long');
-    this.formUpdateById.set(15);
-
-    const now = new Date();
-    const dDep = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
-    const dClose = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
-    const dArr = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
-
-    this.formDepartDate.set(dDep.toISOString().slice(0, 10));
-    this.formDepartTime.set('08:00');
-    this.formClosingDate.set(dClose.toISOString().slice(0, 10));
-    this.formClosingTime.set('18:00');
-    this.formArriveDate.set(dArr.toISOString().slice(0, 10));
-    this.formArriveTime.set('14:00');
-
-    this.activeAutocomplete.set(null);
   }
 
   openEditVoyageModal(v: ApiVoyageItem) {
+    // 1. Refresh dữ liệu về mặc định trước khi bật lên
+    this.resetVoyageFormToDefaults();
+
+    // 2. Sau đó mới nạp dữ liệu từ chuyến tàu cần edit
+    const dep = v.depart_time ? this.parseDateTime(v.depart_time) : { date: '', time: '' };
+    const cls = v.closing_time ? this.parseDateTime(v.closing_time) : { date: '', time: '' };
+    const arr = v.arrive_time ? this.parseDateTime(v.arrive_time) : { date: '', time: '' };
+
+    const editValues = {
+      id: v.id || '',
+      supplier_name: v.supplier_name || '',
+      supplier_id: v.supplier_id ?? (v as any).supplier ?? null,
+      vessel_name: v.vessel_name || '',
+      vessel_id: v.vessel_id || null,
+      voyage_name: v.voyage_name || '',
+      load_port_name: v.load_port_name || '',
+      load_port_id: v.load_port_id ?? (v as any).load_port ?? null,
+      load_terminal_name: v.load_terminal_name || '',
+      load_terminal_id: v.load_terminal_id ?? (v as any).load_terminal ?? null,
+      discharge_port_name: v.discharge_port_name || '',
+      discharge_port_id: v.discharge_port_id ?? (v as any).discharge_port ?? null,
+      discharge_terminal_name: v.discharge_terminal_name || '',
+      discharge_terminal_id: v.discharge_terminal_id ?? (v as any).discharge_terminal ?? null,
+      depart_date: dep.date,
+      depart_time: dep.time,
+      closing_date: cls.date,
+      closing_time: cls.time,
+      arrive_date: arr.date,
+      arrive_time: arr.time,
+      update_by: v.update_by || 'Albert Long',
+    };
+
+    this.voyageForm.patchValue(editValues);
     this.voyageModalMode.set('EDIT');
-    this.formId.set(v.id || '');
-    this.formSupplierName.set(v.supplier_name || '');
-    this.formSupplierId.set(v.supplier_id || null);
-    this.formVesselName.set(v.vessel_name || '');
-    this.formVesselId.set(v.vessel_id || null);
-    this.formVoyageName.set(v.voyage_name || '');
-    this.formLoadPortName.set(v.load_port_name || '');
-    this.formLoadPortId.set(v.load_port_id || v.load_port || null);
-    this.formLoadTerminalName.set(v.load_terminal_name || '');
-    this.formLoadTerminalId.set(v.load_terminal_id || v.load_terminal || null);
-    this.formDischargePortName.set(v.discharge_port_name || '');
-    this.formDischargePortId.set(v.discharge_port_id || v.discharge_port || null);
-    this.formDischargeTerminalName.set(v.discharge_terminal_name || '');
-    this.formDischargeTerminalId.set(v.discharge_terminal_id || v.discharge_terminal || null);
-    this.formUpdateByName.set(v.update_by_name || 'Albert Long');
-    this.formUpdateById.set(v.update_by_id || 15);
-
-    const dep = this.parseDateTime(v.depart_time);
-    this.formDepartDate.set(dep.date);
-    this.formDepartTime.set(dep.time);
-
-    const cls = this.parseDateTime(v.closing_time);
-    this.formClosingDate.set(cls.date);
-    this.formClosingTime.set(cls.time);
-
-    const arr = this.parseDateTime(v.arrive_time);
-    this.formArriveDate.set(arr.date);
-    this.formArriveTime.set(arr.time);
-
-    this.activeAutocomplete.set(null);
   }
 
   openCopyVoyageModal(v: ApiVoyageItem) {
+    // 1. Refresh dữ liệu về mặc định trước khi bật lên
+    this.resetVoyageFormToDefaults();
+
+    // 2. Sau đó mới nạp dữ liệu từ chuyến tàu cần copy
+    const dep = v.depart_time ? this.parseDateTime(v.depart_time) : { date: '', time: '' };
+    const cls = v.closing_time ? this.parseDateTime(v.closing_time) : { date: '', time: '' };
+    const arr = v.arrive_time ? this.parseDateTime(v.arrive_time) : { date: '', time: '' };
+
+    const copyValues = {
+      id: '',
+      supplier_name: v.supplier_name || '',
+      supplier_id: v.supplier_id ?? (v as any).supplier ?? null,
+      vessel_name: v.vessel_name || '',
+      vessel_id: v.vessel_id || null,
+      voyage_name: null,
+      load_port_name: v.load_port_name || '',
+      load_port_id: v.load_port_id ?? (v as any).load_port ?? null,
+      load_terminal_name: v.load_terminal_name || '',
+      load_terminal_id: v.load_terminal_id ?? (v as any).load_terminal ?? null,
+      discharge_port_name: v.discharge_port_name || '',
+      discharge_port_id: v.discharge_port_id ?? (v as any).discharge_port ?? null,
+      discharge_terminal_name: v.discharge_terminal_name || '',
+      discharge_terminal_id: v.discharge_terminal_id ?? (v as any).discharge_terminal ?? null,
+      update_by: 'Albert Long',
+    };
+
+    this.voyageForm.patchValue(copyValues);
     this.voyageModalMode.set('COPY');
-    this.formId.set(''); // ID rỗng để tạo mới
-    this.formSupplierName.set(v.supplier_name || '');
-    this.formSupplierId.set(v.supplier_id || null);
-    this.formVesselName.set(v.vessel_name || '');
-    this.formVesselId.set(v.vessel_id || null);
-    this.formLoadPortName.set(v.load_port_name || '');
-    this.formLoadPortId.set(v.load_port_id || v.load_port || null);
-    this.formLoadTerminalName.set(v.load_terminal_name || '');
-    this.formLoadTerminalId.set(v.load_terminal_id || v.load_terminal || null);
-    this.formDischargePortName.set(v.discharge_port_name || '');
-    this.formDischargePortId.set(v.discharge_port_id || v.discharge_port || null);
-    this.formDischargeTerminalName.set(v.discharge_terminal_name || '');
-    this.formDischargeTerminalId.set(v.discharge_terminal_id || v.discharge_terminal || null);
-    this.formUpdateByName.set('Albert Long');
-    this.formUpdateById.set(15);
-
-
-    this.activeAutocomplete.set(null);
   }
 
   closeVoyageModal() {
     this.voyageModalMode.set(null);
-    this.activeAutocomplete.set(null);
+    this.resetVoyageFormToDefaults();
   }
 
   async saveVoyage() {
-    if (!this.formSupplierId()) {
+    this.voyageFormSubmitted.set(true);
+    this.voyageForm.markAllAsTouched();
+
+    if (this.voyageForm.invalid) {
+      this.showToast('warning', 'Validators Form Chưa Hợp Lệ', 'Vui lòng kiểm tra các trường có cảnh báo Validators (viền đỏ) và điền đầy đủ.');
+      return;
+    }
+
+    if (this.isDateSequenceInvalid()) {
+      this.showToast('error', 'Lỗi thời gian (Validators)', 'Thời gian cập cảng (ETA) không được trước thời gian khởi hành (ETD).');
+      return;
+    }
+
+    const formVal = this.voyageForm.getRawValue();
+
+    if (!formVal.supplier_id) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Hãng tàu từ danh mục gợi ý.');
       return;
     }
-    if (!this.formVesselId()) {
+    if (!formVal.vessel_id) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Tên tàu từ danh mục gợi ý.');
       return;
     }
-    if (!this.formVoyageName().trim()) {
+    if (!formVal.voyage_name?.trim()) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng nhập Số chuyến (Voyage name).');
       return;
     }
-    if (!this.formLoadPortId()) {
+    if (!formVal.load_port_id) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Cảng xếp (POL).');
       return;
     }
-    if (!this.formLoadTerminalId()) {
+    if (!formVal.load_terminal_id) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Bến cảng xếp (Load terminal).');
       return;
     }
-    if (!this.formDischargePortId()) {
+    if (!formVal.discharge_port_id) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Cảng dỡ (POD).');
       return;
     }
-    if (!this.formDischargeTerminalId()) {
+    if (!formVal.discharge_terminal_id) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Bến cảng dỡ (Discharge terminal).');
       return;
     }
-    if (!this.formDepartDate()) {
+    if (!formVal.depart_date) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Ngày khởi hành (Depart Date).');
       return;
     }
-    if (!this.formClosingDate()) {
+    if (!formVal.closing_date) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Ngày đóng sổ (Cut-off Date).');
       return;
     }
-    if (!this.formArriveDate()) {
+    if (!formVal.arrive_date) {
       this.showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn Ngày cập cảng (Arrive Date).');
       return;
     }
 
-    const depart_time = `${this.formDepartDate()} ${this.formDepartTime()}`.trim();
-    const closing_time = `${this.formClosingDate()} ${this.formClosingTime()}`.trim();
-    const arrive_time = `${this.formArriveDate()} ${this.formArriveTime()}`.trim();
+    const depart_time = `${formVal.depart_date} ${formVal.depart_time}`.trim();
+    const closing_time = `${formVal.closing_date} ${formVal.closing_time}`.trim();
+    const arrive_time = `${formVal.arrive_date} ${formVal.arrive_time}`.trim();
 
     const payload = {
-      id: this.formId() || '',
-      supplier_name: this.formSupplierName(),
-      supplier_id: this.formSupplierId(),
-      vessel_name: this.formVesselName(),
-      vessel_id: this.formVesselId(),
-      voyage_name: this.formVoyageName().trim(),
-      load_port_name: this.formLoadPortName(),
-      load_port_id: this.formLoadPortId(),
-      load_terminal_name: this.formLoadTerminalName(),
-      load_terminal_id: this.formLoadTerminalId(),
+      id: formVal.id || '',
+      supplier_name: formVal.supplier_name,
+      supplier_id: formVal.supplier_id,
+      vessel_name: formVal.vessel_name,
+      vessel_id: formVal.vessel_id,
+      voyage_name: formVal.voyage_name.trim(),
+      load_port_name: formVal.load_port_name,
+      load_port_id: formVal.load_port_id,
+      load_terminal_name: formVal.load_terminal_name,
+      load_terminal_id: formVal.load_terminal_id,
       depart_time,
       closing_time,
-      discharge_port_name: this.formDischargePortName(),
-      discharge_port_id: this.formDischargePortId(),
-      discharge_terminal_name: this.formDischargeTerminalName(),
-      discharge_terminal_id: this.formDischargeTerminalId(),
+      discharge_port_name: formVal.discharge_port_name,
+      discharge_port_id: formVal.discharge_port_id,
+      discharge_terminal_name: formVal.discharge_terminal_name,
+      discharge_terminal_id: formVal.discharge_terminal_id,
       arrive_time,
-      update_by_name: this.formUpdateByName() || 'Albert Long',
-      update_by_id: this.formUpdateById() || 15
+      update_by: formVal.update_by || 'Albert Long'
     };
 
     const success = await this.saveVoyageApi(payload);
@@ -4479,7 +4475,7 @@ export class AppComponent implements OnInit {
       this.showToast('info', 'Đang xử lý', 'Đang kết nối đến máy chủ...');
 
       // 3. Gọi POST API
-      const response = await fetch('https://synthesis-boxer-jarring.ngrok-free.dev/sel/login/sale', {
+      const response = await fetch('https://ishipto-node10.appspot.com/sel/login/sale', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -4512,13 +4508,6 @@ export class AppComponent implements OnInit {
     }
   }
 
-  enterDemoMode() {
-    this.isLoggedIn.set(true);
-    this.activeStep.set(1);
-    this.showToast('info', 'Trải nghiệm trực tiếp', 'Đang truy cập Bảng Lịch tàu & Modal Quản lý chuyến tàu.');
-    this.fetchMasterData();
-    this.fetchVoyages();
-  }
 
   logout() {
     this.isLoggedIn.set(false);
